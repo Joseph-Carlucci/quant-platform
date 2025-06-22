@@ -1,0 +1,102 @@
+# Environment files
+.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite3
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# pytest
+.pytest_cache/
+.coverage
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# AWS
+.aws/
+
+# Kubernetes
+*.kubeconfig
+
+# Data files (optional - uncomment if you don't want to track data)
+# data/
+# *.csv
+# *.parquet
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Secrets and keys (IMPORTANT!)
+*.pem
+*.key
+# Allow k8s/secrets.yaml template but block other secret files
+secrets.yml
+secrets.yaml
+!k8s/secrets.yaml
+
+# Docker
+.docker/
+
+# Airflow
+airflow.cfg
+airflow.db
+webserver_config.py 

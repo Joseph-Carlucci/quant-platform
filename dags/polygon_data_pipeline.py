@@ -447,3 +447,5 @@ fetch_ticker_details_task = PythonOperator(
 
 # Define task dependencies
 create_tables_task >> [fetch_previous_close_task, fetch_daily_aggs_task, fetch_ticker_details_task] 
+
+# Comment to test the ci/cd pipeline

@@ -1,0 +1,147 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # Allow manual triggering
+
+env:
+  AWS_REGION: us-east-1
+  EKS_CLUSTER_NAME: quant-platform
+  NAMESPACE: quant-platform
+
+jobs:
+  deploy:
+    name: Deploy to EKS
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+        
+    - name: Install kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+        
+    - name: Update kubeconfig
+      run: |
+        aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+        
+    - name: Verify cluster connection
+      run: |
+        kubectl get nodes
+        kubectl get namespaces
+        
+    - name: Deploy ConfigMaps and Secrets
+      run: |
+        # Apply environment configuration
+        kubectl apply -f k8s/config.yaml
+        
+        # Create secrets from GitHub repository secrets (not from the template file)
+        kubectl create secret generic quant-secrets \
+          --from-literal=postgres-password="${{ secrets.POSTGRES_PASSWORD }}" \
+          --from-literal=pgadmin-password="${{ secrets.PGADMIN_PASSWORD }}" \
+          --from-literal=polygon-api-key="${{ secrets.POLYGON_API_KEY }}" \
+          --namespace=${{ env.NAMESPACE }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+        
+        # Update DAGs ConfigMap
+        kubectl create configmap airflow-dags \
+          --from-file=dags/ \
+          --namespace=${{ env.NAMESPACE }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+          
+        # Update DB init scripts
+        kubectl create configmap db-init-scripts \
+          --from-file=init.sql \
+          --namespace=${{ env.NAMESPACE }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+          
+    - name: Deploy Infrastructure
+      run: |
+        # Deploy in order of dependencies
+        kubectl apply -f k8s/postgres.yaml
+        kubectl apply -f k8s/redis.yaml
+        kubectl apply -f k8s/airflow.yaml
+        kubectl apply -f k8s/pgadmin.yaml
+        
+    - name: Wait for deployments to be ready
+      run: |
+        echo "Waiting for PostgreSQL to be ready..."
+        kubectl wait --for=condition=available --timeout=300s deployment/postgres -n ${{ env.NAMESPACE }}
+        
+        echo "Waiting for Redis to be ready..."
+        kubectl wait --for=condition=available --timeout=300s deployment/redis -n ${{ env.NAMESPACE }}
+        
+        echo "Waiting for Airflow to be ready..."
+        kubectl wait --for=condition=available --timeout=600s deployment/airflow -n ${{ env.NAMESPACE }}
+        
+        echo "Waiting for pgAdmin to be ready..."
+        kubectl wait --for=condition=available --timeout=300s deployment/pgadmin -n ${{ env.NAMESPACE }}
+        
+    - name: Restart Airflow to pick up new DAGs
+      run: |
+        kubectl rollout restart deployment/airflow -n ${{ env.NAMESPACE }}
+        kubectl rollout status deployment/airflow -n ${{ env.NAMESPACE }} --timeout=600s
+        
+    - name: Get service URLs
+      run: |
+        echo "=== Deployment Complete ==="
+        echo "Getting service URLs..."
+        
+        AIRFLOW_URL=$(kubectl get service airflow -n ${{ env.NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+        PGADMIN_URL=$(kubectl get service pgadmin -n ${{ env.NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+        
+        echo "�� Airflow: http://${AIRFLOW_URL}:8080"
+        echo "🔧 pgAdmin: http://${PGADMIN_URL}:80"
+        echo ""
+        echo "Login credentials:"
+        echo "Airflow - admin/admin"
+        echo "pgAdmin - admin@admin.com/admin"
+        
+        # Save URLs to GitHub environment for potential use in other jobs
+        echo "AIRFLOW_URL=http://${AIRFLOW_URL}:8080" >> $GITHUB_ENV
+        echo "PGADMIN_URL=http://${PGADMIN_URL}:80" >> $GITHUB_ENV
+        
+    - name: Verify DAGs are loaded
+      run: |
+        # Wait a bit for Airflow to fully start
+        sleep 30
+        
+        # Get the Airflow pod name
+        AIRFLOW_POD=$(kubectl get pods -n ${{ env.NAMESPACE }} -l app=airflow -o jsonpath='{.items[0].metadata.name}')
+        
+        echo "Checking DAGs in Airflow pod: $AIRFLOW_POD"
+        kubectl exec $AIRFLOW_POD -c airflow-webserver -n ${{ env.NAMESPACE }} -- airflow dags list
+        
+    - name: Run health checks
+      run: |
+        echo "=== Health Check Results ==="
+        kubectl get pods -n ${{ env.NAMESPACE }}
+        echo ""
+        echo "=== Resource Usage ==="
+        kubectl top pods -n ${{ env.NAMESPACE }} || echo "Metrics server not available"
+
+  notify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Notify deployment status
+      run: |
+        if [ "${{ needs.deploy.result }}" == "success" ]; then
+          echo "✅ Deployment succeeded!"
+          echo "The quantitative research platform has been updated in production."
+        else
+          echo "❌ Deployment failed!"
+          echo "Please check the workflow logs for details."
+        fi 

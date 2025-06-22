@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: quant-config
+  namespace: quant-platform
+data:
+  # Database configuration
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "quant_data"
+  POSTGRES_USER: "quant_user"
+  
+  # Redis configuration
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  
+  # Airflow configuration
+  AIRFLOW__CORE__EXECUTOR: "LocalExecutor"
+  AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+  AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "False"
+  AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "True"
+  AIRFLOW__WEBSERVER__RBAC: "False"
+  
+  # Timezone settings
+  TZ: "UTC"
+  
+  # Logging configuration
+  AIRFLOW__LOGGING__LOGGING_LEVEL: "INFO"
+  AIRFLOW__LOGGING__FAB_LOGGING_LEVEL: "WARN"
+  
+  # Security settings
+  AIRFLOW__WEBSERVER__SECRET_KEY: "quant_platform_secret_key_2024"
+  
+  # API settings
+  AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth" 

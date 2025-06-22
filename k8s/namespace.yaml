@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: quant-platform
+  labels:
+    name: quant-platform
+    app: quantitative-research-platform 

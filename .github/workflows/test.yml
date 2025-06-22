@@ -1,0 +1,200 @@
+name: Test and Validate
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  validate:
+    name: Validate Configuration
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+        
+    - name: Install yq for YAML validation
+      run: |
+        sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+        sudo chmod +x /usr/local/bin/yq
+        
+    - name: Validate Kubernetes manifests
+      run: |
+        echo "Validating Kubernetes YAML files..."
+        
+        # Check if all required files exist
+        required_files=(
+          "k8s/postgres.yaml"
+          "k8s/redis.yaml" 
+          "k8s/airflow.yaml"
+          "k8s/pgadmin.yaml"
+          "k8s/config.yaml"
+          "k8s/secrets.yaml"
+          "init.sql"
+        )
+        
+        for file in "${required_files[@]}"; do
+          if [[ -f "$file" ]]; then
+            echo "✅ $file exists"
+          else
+            echo "❌ $file is missing"
+            exit 1
+          fi
+        done
+        
+        # Validate YAML syntax using yq (doesn't require K8s cluster)
+        for yaml_file in k8s/*.yaml; do
+          echo "Validating YAML syntax: $yaml_file..."
+          if yq eval '.' "$yaml_file" > /dev/null; then
+            echo "✅ $yaml_file has valid YAML syntax"
+          else
+            echo "❌ $yaml_file has invalid YAML syntax"
+            exit 1
+          fi
+        done
+        
+        # Validate Kubernetes resource structure (basic checks)
+        for yaml_file in k8s/*.yaml; do
+          echo "Validating K8s structure: $yaml_file..."
+          
+          # Check for required K8s fields
+          if yq eval '.apiVersion' "$yaml_file" | grep -q "null"; then
+            echo "❌ $yaml_file missing apiVersion"
+            exit 1
+          fi
+          
+          if yq eval '.kind' "$yaml_file" | grep -q "null"; then
+            echo "❌ $yaml_file missing kind"
+            exit 1
+          fi
+          
+          if yq eval '.metadata.name' "$yaml_file" | grep -q "null"; then
+            echo "❌ $yaml_file missing metadata.name"
+            exit 1
+          fi
+          
+          echo "✅ $yaml_file has valid Kubernetes structure"
+        done
+        
+        echo "✅ All Kubernetes manifests are valid"
+        
+    - name: Validate DAG files
+      run: |
+        echo "Validating DAG files..."
+        
+        # Check if DAGs directory exists and has Python files
+        if [[ -d "dags" ]]; then
+          echo "✅ dags directory exists"
+          
+          dag_count=$(find dags -name "*.py" | wc -l)
+          echo "Found $dag_count DAG files"
+          
+          if [[ $dag_count -eq 0 ]]; then
+            echo "❌ No Python DAG files found in dags directory"
+            exit 1
+          fi
+          
+          # List DAG files
+          echo "DAG files:"
+          find dags -name "*.py" -exec echo "  - {}" \;
+          
+        else
+          echo "❌ dags directory is missing"
+          exit 1
+        fi
+        
+        echo "✅ DAG files validation passed"
+        
+    - name: Check Python syntax in DAGs
+      run: |
+        echo "Checking Python syntax in DAG files..."
+        
+        # Install minimal dependencies for syntax checking
+        python3 -m pip install --upgrade pip
+        python3 -m pip install --no-deps apache-airflow==2.8.0 || echo "Skipping airflow installation for syntax check"
+        
+        # Check basic Python syntax of each DAG file
+        for dag_file in dags/*.py; do
+          echo "Checking basic syntax: $dag_file"
+          if python3 -m py_compile "$dag_file" 2>/dev/null; then
+            echo "✅ $dag_file has valid Python syntax"
+          else
+            echo "⚠️  $dag_file has compilation issues, trying AST parse..."
+            if python3 -c "import ast; ast.parse(open('$dag_file').read())"; then
+              echo "✅ $dag_file has valid Python syntax (AST check)"
+            else
+              echo "❌ $dag_file has syntax errors"
+              exit 1
+            fi
+          fi
+        done
+        
+        echo "✅ All DAG files have valid Python syntax"
+        
+    - name: Validate init.sql
+      run: |
+        echo "Validating init.sql file..."
+        
+        if [[ -f "init.sql" ]]; then
+          echo "✅ init.sql exists"
+          
+          # Basic validation - check for common SQL keywords
+          if grep -q "CREATE DATABASE\|CREATE USER\|GRANT" init.sql; then
+            echo "✅ init.sql contains expected database initialization commands"
+          else
+            echo "⚠️  init.sql may be missing database initialization commands"
+          fi
+          
+          # Check file size
+          file_size=$(wc -c < init.sql)
+          echo "init.sql size: $file_size bytes"
+          
+          # Check for required databases
+          if grep -q "CREATE DATABASE airflow" init.sql; then
+            echo "✅ Airflow database creation found"
+          else
+            echo "❌ Airflow database creation missing"
+            exit 1
+          fi
+          
+          if grep -q "CREATE DATABASE quant_data" init.sql; then
+            echo "✅ Quant data database creation found"
+          else
+            echo "❌ Quant data database creation missing"
+            exit 1
+          fi
+          
+        else
+          echo "❌ init.sql is missing"
+          exit 1
+        fi
+        
+    - name: Generate deployment summary
+      run: |
+        echo "=== Deployment Summary ==="
+        echo "✅ Configuration validation passed"
+        echo "✅ Kubernetes manifests are valid"
+        echo "✅ DAG files are valid"
+        echo "✅ Database initialization script is present"
+        echo ""
+        echo "This PR is ready for deployment to production!"
+        echo ""
+        echo "Services that will be deployed:"
+        echo "  - PostgreSQL (persistent database)"
+        echo "  - Redis (caching and session management)"
+        echo "  - Airflow (data pipeline orchestration)"
+        echo "  - pgAdmin (database administration)"
+        echo ""
+        echo "DAG files that will be loaded:"
+        find dags -name "*.py" -exec basename {} \; | sed 's/^/  - /' 
