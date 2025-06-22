@@ -19,6 +19,11 @@ jobs:
       with:
         version: 'v1.28.0'
         
+    - name: Install yq for YAML validation
+      run: |
+        sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+        sudo chmod +x /usr/local/bin/yq
+        
     - name: Validate Kubernetes manifests
       run: |
         echo "Validating Kubernetes YAML files..."
@@ -43,10 +48,38 @@ jobs:
           fi
         done
         
-        # Validate YAML syntax
+        # Validate YAML syntax using yq (doesn't require K8s cluster)
         for yaml_file in k8s/*.yaml; do
-          echo "Validating $yaml_file..."
-          kubectl apply --dry-run=client --validate=true -f "$yaml_file" || exit 1
+          echo "Validating YAML syntax: $yaml_file..."
+          if yq eval '.' "$yaml_file" > /dev/null; then
+            echo "✅ $yaml_file has valid YAML syntax"
+          else
+            echo "❌ $yaml_file has invalid YAML syntax"
+            exit 1
+          fi
+        done
+        
+        # Validate Kubernetes resource structure (basic checks)
+        for yaml_file in k8s/*.yaml; do
+          echo "Validating K8s structure: $yaml_file..."
+          
+          # Check for required K8s fields
+          if yq eval '.apiVersion' "$yaml_file" | grep -q "null"; then
+            echo "❌ $yaml_file missing apiVersion"
+            exit 1
+          fi
+          
+          if yq eval '.kind' "$yaml_file" | grep -q "null"; then
+            echo "❌ $yaml_file missing kind"
+            exit 1
+          fi
+          
+          if yq eval '.metadata.name' "$yaml_file" | grep -q "null"; then
+            echo "❌ $yaml_file missing metadata.name"
+            exit 1
+          fi
+          
+          echo "✅ $yaml_file has valid Kubernetes structure"
         done
         
         echo "✅ All Kubernetes manifests are valid"
@@ -111,6 +144,21 @@ jobs:
           # Check file size
           file_size=$(wc -c < init.sql)
           echo "init.sql size: $file_size bytes"
+          
+          # Check for required databases
+          if grep -q "CREATE DATABASE airflow" init.sql; then
+            echo "✅ Airflow database creation found"
+          else
+            echo "❌ Airflow database creation missing"
+            exit 1
+          fi
+          
+          if grep -q "CREATE DATABASE quant_data" init.sql; then
+            echo "✅ Quant data database creation found"
+          else
+            echo "❌ Quant data database creation missing"
+            exit 1
+          fi
           
         else
           echo "❌ init.sql is missing"
