@@ -42,11 +42,16 @@ jobs:
         
     - name: Deploy ConfigMaps and Secrets
       run: |
-        # Apply secrets (if they don't exist, this will create them)
-        kubectl apply -f k8s/secrets.yaml
-        
-        # Apply config maps
+        # Apply environment configuration
         kubectl apply -f k8s/config.yaml
+        
+        # Create secrets from GitHub repository secrets (not from the template file)
+        kubectl create secret generic quant-secrets \
+          --from-literal=postgres-password="${{ secrets.POSTGRES_PASSWORD }}" \
+          --from-literal=pgadmin-password="${{ secrets.PGADMIN_PASSWORD }}" \
+          --from-literal=polygon-api-key="${{ secrets.POLYGON_API_KEY }}" \
+          --namespace=${{ env.NAMESPACE }} \
+          --dry-run=client -o yaml | kubectl apply -f -
         
         # Update DAGs ConfigMap
         kubectl create configmap airflow-dags \

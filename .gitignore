@@ -88,8 +88,10 @@ temp/
 # Secrets and keys (IMPORTANT!)
 *.pem
 *.key
+# Allow k8s/secrets.yaml template but block other secret files
 secrets.yml
 secrets.yaml
+!k8s/secrets.yaml
 
 # Docker
 .docker/
