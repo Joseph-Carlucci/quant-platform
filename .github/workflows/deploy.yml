@@ -100,16 +100,20 @@ jobs:
         AIRFLOW_URL=$(kubectl get service airflow -n ${{ env.NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
         PGADMIN_URL=$(kubectl get service pgadmin -n ${{ env.NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
         
-        echo "�� Airflow: http://${AIRFLOW_URL}:8080"
-        echo "🔧 pgAdmin: http://${PGADMIN_URL}:80"
+        # Get the actual service ports
+        AIRFLOW_PORT=$(kubectl get service airflow -n ${{ env.NAMESPACE }} -o jsonpath='{.spec.ports[0].port}')
+        PGADMIN_PORT=$(kubectl get service pgadmin -n ${{ env.NAMESPACE }} -o jsonpath='{.spec.ports[0].port}')
+        
+        echo "🚀 Airflow: http://${AIRFLOW_URL}:${AIRFLOW_PORT}"
+        echo "🔧 pgAdmin: http://${PGADMIN_URL}:${PGADMIN_PORT}"
         echo ""
         echo "Login credentials:"
         echo "Airflow - admin/admin"
         echo "pgAdmin - admin@admin.com/admin"
         
         # Save URLs to GitHub environment for potential use in other jobs
-        echo "AIRFLOW_URL=http://${AIRFLOW_URL}:8080" >> $GITHUB_ENV
-        echo "PGADMIN_URL=http://${PGADMIN_URL}:80" >> $GITHUB_ENV
+        echo "AIRFLOW_URL=http://${AIRFLOW_URL}:${AIRFLOW_PORT}" >> $GITHUB_ENV
+        echo "PGADMIN_URL=http://${PGADMIN_URL}:${PGADMIN_PORT}" >> $GITHUB_ENV
         
     - name: Verify DAGs are loaded
       run: |
