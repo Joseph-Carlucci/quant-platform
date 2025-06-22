@@ -1,0 +1,9 @@
+# Ignore Kubernetes ConfigMap symlink directories to prevent recursive loops
+\.\.data
+\.\.20.*
+\.git
+__pycache__
+.*\.pyc$
+.*\.pyo$
+\.DS_Store
+\.env 
