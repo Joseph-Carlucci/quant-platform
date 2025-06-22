@@ -124,24 +124,20 @@ jobs:
         python3 -m pip install --upgrade pip
         python3 -m pip install --no-deps apache-airflow==2.8.0 || echo "Skipping airflow installation for syntax check"
         
-        # Check basic Python syntax of each DAG file (without imports)
+        # Check basic Python syntax of each DAG file
         for dag_file in dags/*.py; do
           echo "Checking basic syntax: $dag_file"
-          python3 -m py_compile "$dag_file" 2>/dev/null || {
-            echo "⚠️  $dag_file has syntax issues, checking without imports..."
-            # Try to check syntax by parsing AST without executing imports
-            python3 -c "
-import ast
-import sys
-try:
-    with open('$dag_file', 'r') as f:
-        ast.parse(f.read())
-    print('✅ $dag_file has valid Python syntax')
-except SyntaxError as e:
-    print('❌ $dag_file has syntax error:', e)
-    sys.exit(1)
-            "
-          }
+          if python3 -m py_compile "$dag_file" 2>/dev/null; then
+            echo "✅ $dag_file has valid Python syntax"
+          else
+            echo "⚠️  $dag_file has compilation issues, trying AST parse..."
+            if python3 -c "import ast; ast.parse(open('$dag_file').read())"; then
+              echo "✅ $dag_file has valid Python syntax (AST check)"
+            else
+              echo "❌ $dag_file has syntax errors"
+              exit 1
+            fi
+          fi
         done
         
         echo "✅ All DAG files have valid Python syntax"
