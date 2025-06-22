@@ -1,0 +1,22 @@
+[2025-06-22T18:59:19.105+0000] {taskinstance.py:1957} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: polygon_data_pipeline.fetch_previous_close manual__2025-06-22T18:59:17.216037+00:00 [queued]>
+[2025-06-22T18:59:19.111+0000] {taskinstance.py:1957} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: polygon_data_pipeline.fetch_previous_close manual__2025-06-22T18:59:17.216037+00:00 [queued]>
+[2025-06-22T18:59:19.112+0000] {taskinstance.py:2171} INFO - Starting attempt 1 of 3
+[2025-06-22T18:59:19.119+0000] {taskinstance.py:2192} INFO - Executing <Task(PythonOperator): fetch_previous_close> on 2025-06-22 18:59:17.216037+00:00
+[2025-06-22T18:59:19.122+0000] {standard_task_runner.py:60} INFO - Started process 805 to run task
+[2025-06-22T18:59:19.124+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'polygon_data_pipeline', 'fetch_previous_close', 'manual__2025-06-22T18:59:17.216037+00:00', '--job-id', '26', '--raw', '--subdir', 'DAGS_FOLDER/polygon_data_pipeline.py', '--cfg-path', '/tmp/tmpnpr7tnww']
+[2025-06-22T18:59:19.126+0000] {standard_task_runner.py:88} INFO - Job 26: Subtask fetch_previous_close
+[2025-06-22T18:59:19.154+0000] {task_command.py:423} INFO - Running <TaskInstance: polygon_data_pipeline.fetch_previous_close manual__2025-06-22T18:59:17.216037+00:00 [running]> on host d592ca41c3d5
+[2025-06-22T18:59:19.196+0000] {taskinstance.py:2481} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='quant-team' AIRFLOW_CTX_DAG_ID='polygon_data_pipeline' AIRFLOW_CTX_TASK_ID='fetch_previous_close' AIRFLOW_CTX_EXECUTION_DATE='2025-06-22T18:59:17.216037+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-06-22T18:59:17.216037+00:00'
+[2025-06-22T18:59:19.336+0000] {polygon_data_pipeline.py:199} INFO - Fetched previous close for AAPL: $201
+[2025-06-22T18:59:19.456+0000] {polygon_data_pipeline.py:199} INFO - Fetched previous close for GOOGL: $166.64
+[2025-06-22T18:59:19.566+0000] {polygon_data_pipeline.py:199} INFO - Fetched previous close for MSFT: $477.4
+[2025-06-22T18:59:19.666+0000] {polygon_data_pipeline.py:199} INFO - Fetched previous close for TSLA: $322.16
+[2025-06-22T18:59:19.800+0000] {polygon_data_pipeline.py:199} INFO - Fetched previous close for AMZN: $209.69
+[2025-06-22T18:59:19.916+0000] {polygon_data_pipeline.py:199} INFO - Fetched previous close for NVDA: $143.85
+[2025-06-22T18:59:20.033+0000] {polygon_data_pipeline.py:199} INFO - Fetched previous close for META: $682.35
+[2025-06-22T18:59:20.151+0000] {polygon_data_pipeline.py:199} INFO - Fetched previous close for SPY: $594.28
+[2025-06-22T18:59:20.164+0000] {polygon_data_pipeline.py:246} INFO - Stored/updated 8 previous close records
+[2025-06-22T18:59:20.165+0000] {python.py:201} INFO - Done. Returned value was: 8
+[2025-06-22T18:59:20.179+0000] {taskinstance.py:1138} INFO - Marking task as SUCCESS. dag_id=polygon_data_pipeline, task_id=fetch_previous_close, execution_date=20250622T185917, start_date=20250622T185919, end_date=20250622T185920
+[2025-06-22T18:59:20.210+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 0
+[2025-06-22T18:59:20.221+0000] {taskinstance.py:3281} INFO - 0 downstream tasks scheduled from follow-on schedule check

@@ -1,0 +1,167 @@
+version: '3.8'
+
+# ==============================================================================
+# QUANTITATIVE RESEARCH PLATFORM - DOCKER COMPOSE CONFIGURATION
+# ==============================================================================
+# This docker-compose file sets up the core infrastructure for a quantitative
+# research platform including data ingestion, processing, and storage components.
+#
+# Architecture Overview:
+# - PostgreSQL: Primary database for both Airflow metadata and quantitative data
+# - Redis: Message broker for future scaling to distributed Airflow workers
+# - Airflow: Orchestrates data pipelines and workflows
+# - PgAdmin: Web-based database administration tool
+# ==============================================================================
+
+services:
+  # ==============================================================================
+  # POSTGRESQL DATABASE
+  # ==============================================================================
+  # Primary database serving two purposes:
+  # 1. Airflow metadata storage (DAG runs, task instances, connections, etc.)
+  # 2. Quantitative data storage (market data, fundamental data, model results)
+  #
+  # The db-init scripts automatically create separate databases and schemas
+  # for clean data organization and access control.
+  # ==============================================================================
+  postgres:
+    image: postgres:15
+    container_name: quant-postgres
+    environment:
+      POSTGRES_USER: postgres          # Superuser for database administration
+      POSTGRES_PASSWORD: postgres      # Change in production!
+      POSTGRES_DB: postgres           # Default database
+    volumes:
+      # Persistent storage for database data
+      - postgres_data:/var/lib/postgresql/data
+      # Initialization scripts run on first startup
+      - ./db-init:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"                   # Expose for external connections (dev only)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - quant-network
+
+  # ==============================================================================
+  # REDIS - MESSAGE BROKER
+  # ==============================================================================
+  # Currently not used with LocalExecutor, but included for future scalability.
+  # When switching to CeleryExecutor, Redis will serve as:
+  # - Message broker between Airflow scheduler and workers
+  # - Task queue for distributed processing
+  # - Result backend for task status and outputs
+  #
+  # Benefits of keeping it now:
+  # - Zero-effort migration to distributed setup later
+  # - Ability to test CeleryExecutor without infrastructure changes
+  # - Minimal resource overhead when not actively used
+  # ==============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: quant-redis
+    ports:
+      - "6379:6379"                   # Expose for monitoring/debugging
+    networks:
+      - quant-network
+
+  # ==============================================================================
+  # APACHE AIRFLOW - WORKFLOW ORCHESTRATION
+  # ==============================================================================
+  # Orchestrates all data pipelines and workflows for the quant platform.
+  # Currently runs in LocalExecutor mode (single container) for simplicity.
+  #
+  # Key responsibilities:
+  # - Schedule and run data ingestion DAGs
+  # - Coordinate model training and backtesting workflows  
+  # - Monitor pipeline health and handle failures
+  # - Provide web UI for workflow management
+  #
+  # The container runs both webserver and scheduler in a single process.
+  # For production, consider separating these into different containers.
+  # ==============================================================================
+  airflow:
+    image: apache/airflow:2.8.0-python3.11
+    container_name: quant-airflow
+    environment:
+      # Use LocalExecutor for single-machine setup (change to CeleryExecutor for scaling)
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      
+      # Database connection for Airflow metadata
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      
+      # UI and behavior settings
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'              # Don't load example DAGs
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false' # Auto-enable new DAGs
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'          # Show config in UI
+      
+      # API Keys and external service configuration
+      POLYGON_API_KEY: ${POLYGON_API_KEY:-}              # Optional: set via .env file or environment
+      
+      # Additional Python packages for quantitative analysis and API integrations
+      _PIP_ADDITIONAL_REQUIREMENTS: pandas psycopg2-binary sqlalchemy requests yfinance numpy
+    volumes:
+      # Mount local directories for DAG development
+      - ./dags:/opt/airflow/dags           # DAG files
+      - ./logs:/opt/airflow/logs           # Execution logs  
+      - ./plugins:/opt/airflow/plugins     # Custom plugins
+    ports:
+      - "8080:8080"                       # Airflow web UI
+    depends_on:
+      postgres:
+        condition: service_healthy        # Wait for database to be ready
+    networks:
+      - quant-network
+    # Initialize database and create admin user on startup
+    command: >
+      bash -c "
+        airflow db init &&
+        airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@admin.com --password admin &&
+        airflow webserver & airflow scheduler
+      "
+
+  # ==============================================================================
+  # PGADMIN - DATABASE ADMINISTRATION
+  # ==============================================================================
+  # Web-based PostgreSQL administration tool for:
+  # - Database schema management
+  # - Query execution and debugging
+  # - Data exploration and analysis
+  # - Performance monitoring
+  #
+  # Access via http://localhost:5050 with admin@admin.com / admin
+  # Useful for inspecting ingested data and troubleshooting database issues.
+  # ==============================================================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: quant-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com    # Login email
+      PGADMIN_DEFAULT_PASSWORD: admin           # Login password (change in production!)
+    ports:
+      - "5050:80"                              # Web interface
+    depends_on:
+      - postgres
+    networks:
+      - quant-network
+
+# ==============================================================================
+# PERSISTENT VOLUMES
+# ==============================================================================
+# Named volumes for data persistence across container restarts
+# ==============================================================================
+volumes:
+  postgres_data:                              # PostgreSQL data directory
+
+# ==============================================================================
+# NETWORK CONFIGURATION  
+# ==============================================================================
+# Custom bridge network for service communication
+# All services can communicate using container names as hostnames
+# ==============================================================================
+networks:
+  quant-network:
+    driver: bridge 

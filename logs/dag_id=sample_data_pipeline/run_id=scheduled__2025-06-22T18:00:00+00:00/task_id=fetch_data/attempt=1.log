@@ -1,0 +1,15 @@
+[2025-06-22T19:00:01.367+0000] {taskinstance.py:1957} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: sample_data_pipeline.fetch_data scheduled__2025-06-22T18:00:00+00:00 [queued]>
+[2025-06-22T19:00:01.371+0000] {taskinstance.py:1957} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: sample_data_pipeline.fetch_data scheduled__2025-06-22T18:00:00+00:00 [queued]>
+[2025-06-22T19:00:01.371+0000] {taskinstance.py:2171} INFO - Starting attempt 1 of 2
+[2025-06-22T19:00:01.376+0000] {taskinstance.py:2192} INFO - Executing <Task(PythonOperator): fetch_data> on 2025-06-22 18:00:00+00:00
+[2025-06-22T19:00:01.378+0000] {standard_task_runner.py:60} INFO - Started process 830 to run task
+[2025-06-22T19:00:01.381+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'sample_data_pipeline', 'fetch_data', 'scheduled__2025-06-22T18:00:00+00:00', '--job-id', '30', '--raw', '--subdir', 'DAGS_FOLDER/sample_data_pipeline.py', '--cfg-path', '/tmp/tmps573jrg0']
+[2025-06-22T19:00:01.382+0000] {standard_task_runner.py:88} INFO - Job 30: Subtask fetch_data
+[2025-06-22T19:00:01.409+0000] {task_command.py:423} INFO - Running <TaskInstance: sample_data_pipeline.fetch_data scheduled__2025-06-22T18:00:00+00:00 [running]> on host d592ca41c3d5
+[2025-06-22T19:00:01.453+0000] {taskinstance.py:2481} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='quant-team' AIRFLOW_CTX_DAG_ID='sample_data_pipeline' AIRFLOW_CTX_TASK_ID='fetch_data' AIRFLOW_CTX_EXECUTION_DATE='2025-06-22T18:00:00+00:00' AIRFLOW_CTX_TRY_NUMBER='1' AIRFLOW_CTX_DAG_RUN_ID='scheduled__2025-06-22T18:00:00+00:00'
+[2025-06-22T19:00:01.454+0000] {logging_mixin.py:188} INFO - Fetching sample market data...
+[2025-06-22T19:00:01.456+0000] {logging_mixin.py:188} INFO - Fetched 1 records
+[2025-06-22T19:00:01.456+0000] {python.py:201} INFO - Done. Returned value was: {"timestamp":{"0":1750618801454},"symbol":{"0":"AAPL"},"price":{"0":150.0},"volume":{"0":1000000}}
+[2025-06-22T19:00:01.469+0000] {taskinstance.py:1138} INFO - Marking task as SUCCESS. dag_id=sample_data_pipeline, task_id=fetch_data, execution_date=20250622T180000, start_date=20250622T190001, end_date=20250622T190001
+[2025-06-22T19:00:01.484+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 0
+[2025-06-22T19:00:01.497+0000] {taskinstance.py:3281} INFO - 1 downstream tasks scheduled from follow-on schedule check

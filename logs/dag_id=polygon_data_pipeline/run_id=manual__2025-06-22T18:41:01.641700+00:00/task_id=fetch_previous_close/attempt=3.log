@@ -1,0 +1,98 @@
+[2025-06-22T18:51:04.629+0000] {taskinstance.py:1957} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: polygon_data_pipeline.fetch_previous_close manual__2025-06-22T18:41:01.641700+00:00 [queued]>
+[2025-06-22T18:51:04.633+0000] {taskinstance.py:1957} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: polygon_data_pipeline.fetch_previous_close manual__2025-06-22T18:41:01.641700+00:00 [queued]>
+[2025-06-22T18:51:04.634+0000] {taskinstance.py:2171} INFO - Starting attempt 3 of 3
+[2025-06-22T18:51:04.640+0000] {taskinstance.py:2192} INFO - Executing <Task(PythonOperator): fetch_previous_close> on 2025-06-22 18:41:01.641700+00:00
+[2025-06-22T18:51:04.643+0000] {standard_task_runner.py:60} INFO - Started process 406 to run task
+[2025-06-22T18:51:04.645+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'polygon_data_pipeline', 'fetch_previous_close', 'manual__2025-06-22T18:41:01.641700+00:00', '--job-id', '16', '--raw', '--subdir', 'DAGS_FOLDER/polygon_data_pipeline.py', '--cfg-path', '/tmp/tmpv6bai8zf']
+[2025-06-22T18:51:04.647+0000] {standard_task_runner.py:88} INFO - Job 16: Subtask fetch_previous_close
+[2025-06-22T18:51:04.673+0000] {task_command.py:423} INFO - Running <TaskInstance: polygon_data_pipeline.fetch_previous_close manual__2025-06-22T18:41:01.641700+00:00 [running]> on host d592ca41c3d5
+[2025-06-22T18:51:04.715+0000] {taskinstance.py:2481} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='quant-team' AIRFLOW_CTX_DAG_ID='polygon_data_pipeline' AIRFLOW_CTX_TASK_ID='fetch_previous_close' AIRFLOW_CTX_EXECUTION_DATE='2025-06-22T18:41:01.641700+00:00' AIRFLOW_CTX_TRY_NUMBER='3' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-06-22T18:41:01.641700+00:00'
+[2025-06-22T18:51:04.861+0000] {polygon_data_pipeline.py:198} INFO - Fetched previous close for AAPL: $201
+[2025-06-22T18:51:04.990+0000] {polygon_data_pipeline.py:198} INFO - Fetched previous close for GOOGL: $166.64
+[2025-06-22T18:51:05.126+0000] {polygon_data_pipeline.py:198} INFO - Fetched previous close for MSFT: $477.4
+[2025-06-22T18:51:05.245+0000] {polygon_data_pipeline.py:198} INFO - Fetched previous close for TSLA: $322.16
+[2025-06-22T18:51:05.366+0000] {polygon_data_pipeline.py:198} INFO - Fetched previous close for AMZN: $209.69
+[2025-06-22T18:51:05.477+0000] {polygon_data_pipeline.py:198} INFO - Fetched previous close for NVDA: $143.85
+[2025-06-22T18:51:05.588+0000] {polygon_data_pipeline.py:198} INFO - Fetched previous close for META: $682.35
+[2025-06-22T18:51:05.712+0000] {polygon_data_pipeline.py:198} INFO - Fetched previous close for SPY: $594.28
+[2025-06-22T18:51:05.724+0000] {taskinstance.py:2699} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1910, in _execute_context
+    self.dialect.do_execute(
+  File "/home/airflow/.local/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 736, in do_execute
+    cursor.execute(statement, parameters)
+psycopg2.errors.UniqueViolation: duplicate key value violates unique constraint "previous_close_ticker_date_key"
+DETAIL:  Key (ticker, date)=(AAPL, 2025-06-20) already exists.
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.11/site-packages/airflow/models/taskinstance.py", line 433, in _execute_task
+    result = execute_callable(context=context, **execute_callable_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/airflow/operators/python.py", line 199, in execute
+    return_value = self.execute_callable()
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/airflow/operators/python.py", line 216, in execute_callable
+    return self.python_callable(*self.op_args, **self.op_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/airflow/dags/polygon_data_pipeline.py", line 210, in fetch_previous_close_data
+    df.to_sql('previous_close', engine, schema='market_data',
+  File "/home/airflow/.local/lib/python3.11/site-packages/pandas/util/_decorators.py", line 333, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/pandas/core/generic.py", line 3008, in to_sql
+    return sql.to_sql(
+           ^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/pandas/io/sql.py", line 788, in to_sql
+    return pandas_sql.to_sql(
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/pandas/io/sql.py", line 1958, in to_sql
+    total_inserted = sql_engine.insert_records(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/pandas/io/sql.py", line 1507, in insert_records
+    raise err
+  File "/home/airflow/.local/lib/python3.11/site-packages/pandas/io/sql.py", line 1498, in insert_records
+    return table.insert(chunksize=chunksize, method=method)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/pandas/io/sql.py", line 1059, in insert
+    num_inserted = exec_insert(conn, keys, chunk_iter)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/pandas/io/sql.py", line 967, in _execute_insert_multi
+    result = conn.execute(stmt)
+             ^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1385, in execute
+    return meth(self, multiparams, params, _EMPTY_EXECUTION_OPTS)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/sqlalchemy/sql/elements.py", line 334, in _execute_on_connection
+    return connection._execute_clauseelement(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1577, in _execute_clauseelement
+    ret = self._execute_context(
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1953, in _execute_context
+    self._handle_dbapi_exception(
+  File "/home/airflow/.local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2134, in _handle_dbapi_exception
+    util.raise_(
+  File "/home/airflow/.local/lib/python3.11/site-packages/sqlalchemy/util/compat.py", line 211, in raise_
+    raise exception
+  File "/home/airflow/.local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 1910, in _execute_context
+    self.dialect.do_execute(
+  File "/home/airflow/.local/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 736, in do_execute
+    cursor.execute(statement, parameters)
+sqlalchemy.exc.IntegrityError: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "previous_close_ticker_date_key"
+DETAIL:  Key (ticker, date)=(AAPL, 2025-06-20) already exists.
+
+[SQL: INSERT INTO market_data.previous_close (ticker, date, close_price, open_price, high_price, low_price, volume, pre_market, after_hours) VALUES (%(ticker_m0)s, %(date_m0)s, %(close_price_m0)s, %(open_price_m0)s, %(high_price_m0)s, %(low_price_m0)s, %(volume_m0)s, %(pre_market_m0)s, %(after_hours_m0)s), (%(ticker_m1)s, %(date_m1)s, %(close_price_m1)s, %(open_price_m1)s, %(high_price_m1)s, %(low_price_m1)s, %(volume_m1)s, %(pre_market_m1)s, %(after_hours_m1)s), (%(ticker_m2)s, %(date_m2)s, %(close_price_m2)s, %(open_price_m2)s, %(high_price_m2)s, %(low_price_m2)s, %(volume_m2)s, %(pre_market_m2)s, %(after_hours_m2)s), (%(ticker_m3)s, %(date_m3)s, %(close_price_m3)s, %(open_price_m3)s, %(high_price_m3)s, %(low_price_m3)s, %(volume_m3)s, %(pre_market_m3)s, %(after_hours_m3)s), (%(ticker_m4)s, %(date_m4)s, %(close_price_m4)s, %(open_price_m4)s, %(high_price_m4)s, %(low_price_m4)s, %(volume_m4)s, %(pre_market_m4)s, %(after_hours_m4)s), (%(ticker_m5)s, %(date_m5)s, %(close_price_m5)s, %(open_price_m5)s, %(high_price_m5)s, %(low_price_m5)s, %(volume_m5)s, %(pre_market_m5)s, %(after_hours_m5)s), (%(ticker_m6)s, %(date_m6)s, %(close_price_m6)s, %(open_price_m6)s, %(high_price_m6)s, %(low_price_m6)s, %(volume_m6)s, %(pre_market_m6)s, %(after_hours_m6)s), (%(ticker_m7)s, %(date_m7)s, %(close_price_m7)s, %(open_price_m7)s, %(high_price_m7)s, %(low_price_m7)s, %(volume_m7)s, %(pre_market_m7)s, %(after_hours_m7)s)]
+[parameters: {'ticker_m0': 'AAPL', 'date_m0': datetime.date(2025, 6, 20), 'close_price_m0': 201.0, 'open_price_m0': 198.235, 'high_price_m0': 201.7, 'low_price_m0': 196.855, 'volume_m0': 96813542.0, 'pre_market_m0': None, 'after_hours_m0': None, 'ticker_m1': 'GOOGL', 'date_m1': datetime.date(2025, 6, 20), 'close_price_m1': 166.64, 'open_price_m1': 173.945, 'high_price_m1': 174.34, 'low_price_m1': 165.46, 'volume_m1': 75659917.0, 'pre_market_m1': None, 'after_hours_m1': None, 'ticker_m2': 'MSFT', 'date_m2': datetime.date(2025, 6, 20), 'close_price_m2': 477.4, 'open_price_m2': 482.23, 'high_price_m2': 483.46, 'low_price_m2': 476.87, 'volume_m2': 37576206.0, 'pre_market_m2': None, 'after_hours_m2': None, 'ticker_m3': 'TSLA', 'date_m3': datetime.date(2025, 6, 20), 'close_price_m3': 322.16, 'open_price_m3': 327.95, 'high_price_m3': 332.36, 'low_price_m3': 317.78, 'volume_m3': 108688008.0, 'pre_market_m3': None, 'after_hours_m3': None, 'ticker_m4': 'AMZN', 'date_m4': datetime.date(2025, 6, 20), 'close_price_m4': 209.69, 'open_price_m4': 214.68, 'high_price_m4': 214.89, 'low_price_m4': 208.2709, 'volume_m4': 75350733.0, 'pre_market_m4': None, 'after_hours_m4': None, 'ticker_m5': 'NVDA', 'date_m5': datetime.date(2025, 6, 20), 'close_price_m5': 143.85, 'open_price_m5': 145.45, 'high_price_m5': 146.2, 'low_price_m5': 142.65, 'volume_m5': 242956157.0, 'pre_market_m5': None, 'after_hours_m5': None, 'ticker_m6': 'META', 'date_m6': datetime.date(2025, 6, 20), 'close_price_m6': 682.35, 'open_price_m6': 700.75, 'high_price_m6': 701.8197, 'low_price_m6': 678.67, 'volume_m6': 22538640.0, 'pre_market_m6': None, 'after_hours_m6': None, 'ticker_m7': 'SPY', 'date_m7': datetime.date(2025, 6, 20), 'close_price_m7': 594.28, 'open_price_m7': 598.38, 'high_price_m7': 599.46, 'low_price_m7': 592.86, 'volume_m7': 94051374.0, 'pre_market_m7': None, 'after_hours_m7': None}]
+(Background on this error at: https://sqlalche.me/e/14/gkpj)
+[2025-06-22T18:51:05.733+0000] {taskinstance.py:1138} INFO - Marking task as FAILED. dag_id=polygon_data_pipeline, task_id=fetch_previous_close, execution_date=20250622T184101, start_date=20250622T185104, end_date=20250622T185105
+[2025-06-22T18:51:05.738+0000] {standard_task_runner.py:107} ERROR - Failed to execute job 16 for task fetch_previous_close ((psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "previous_close_ticker_date_key"
+DETAIL:  Key (ticker, date)=(AAPL, 2025-06-20) already exists.
+
+[SQL: INSERT INTO market_data.previous_close (ticker, date, close_price, open_price, high_price, low_price, volume, pre_market, after_hours) VALUES (%(ticker_m0)s, %(date_m0)s, %(close_price_m0)s, %(open_price_m0)s, %(high_price_m0)s, %(low_price_m0)s, %(volume_m0)s, %(pre_market_m0)s, %(after_hours_m0)s), (%(ticker_m1)s, %(date_m1)s, %(close_price_m1)s, %(open_price_m1)s, %(high_price_m1)s, %(low_price_m1)s, %(volume_m1)s, %(pre_market_m1)s, %(after_hours_m1)s), (%(ticker_m2)s, %(date_m2)s, %(close_price_m2)s, %(open_price_m2)s, %(high_price_m2)s, %(low_price_m2)s, %(volume_m2)s, %(pre_market_m2)s, %(after_hours_m2)s), (%(ticker_m3)s, %(date_m3)s, %(close_price_m3)s, %(open_price_m3)s, %(high_price_m3)s, %(low_price_m3)s, %(volume_m3)s, %(pre_market_m3)s, %(after_hours_m3)s), (%(ticker_m4)s, %(date_m4)s, %(close_price_m4)s, %(open_price_m4)s, %(high_price_m4)s, %(low_price_m4)s, %(volume_m4)s, %(pre_market_m4)s, %(after_hours_m4)s), (%(ticker_m5)s, %(date_m5)s, %(close_price_m5)s, %(open_price_m5)s, %(high_price_m5)s, %(low_price_m5)s, %(volume_m5)s, %(pre_market_m5)s, %(after_hours_m5)s), (%(ticker_m6)s, %(date_m6)s, %(close_price_m6)s, %(open_price_m6)s, %(high_price_m6)s, %(low_price_m6)s, %(volume_m6)s, %(pre_market_m6)s, %(after_hours_m6)s), (%(ticker_m7)s, %(date_m7)s, %(close_price_m7)s, %(open_price_m7)s, %(high_price_m7)s, %(low_price_m7)s, %(volume_m7)s, %(pre_market_m7)s, %(after_hours_m7)s)]
+[parameters: {'ticker_m0': 'AAPL', 'date_m0': datetime.date(2025, 6, 20), 'close_price_m0': 201.0, 'open_price_m0': 198.235, 'high_price_m0': 201.7, 'low_price_m0': 196.855, 'volume_m0': 96813542.0, 'pre_market_m0': None, 'after_hours_m0': None, 'ticker_m1': 'GOOGL', 'date_m1': datetime.date(2025, 6, 20), 'close_price_m1': 166.64, 'open_price_m1': 173.945, 'high_price_m1': 174.34, 'low_price_m1': 165.46, 'volume_m1': 75659917.0, 'pre_market_m1': None, 'after_hours_m1': None, 'ticker_m2': 'MSFT', 'date_m2': datetime.date(2025, 6, 20), 'close_price_m2': 477.4, 'open_price_m2': 482.23, 'high_price_m2': 483.46, 'low_price_m2': 476.87, 'volume_m2': 37576206.0, 'pre_market_m2': None, 'after_hours_m2': None, 'ticker_m3': 'TSLA', 'date_m3': datetime.date(2025, 6, 20), 'close_price_m3': 322.16, 'open_price_m3': 327.95, 'high_price_m3': 332.36, 'low_price_m3': 317.78, 'volume_m3': 108688008.0, 'pre_market_m3': None, 'after_hours_m3': None, 'ticker_m4': 'AMZN', 'date_m4': datetime.date(2025, 6, 20), 'close_price_m4': 209.69, 'open_price_m4': 214.68, 'high_price_m4': 214.89, 'low_price_m4': 208.2709, 'volume_m4': 75350733.0, 'pre_market_m4': None, 'after_hours_m4': None, 'ticker_m5': 'NVDA', 'date_m5': datetime.date(2025, 6, 20), 'close_price_m5': 143.85, 'open_price_m5': 145.45, 'high_price_m5': 146.2, 'low_price_m5': 142.65, 'volume_m5': 242956157.0, 'pre_market_m5': None, 'after_hours_m5': None, 'ticker_m6': 'META', 'date_m6': datetime.date(2025, 6, 20), 'close_price_m6': 682.35, 'open_price_m6': 700.75, 'high_price_m6': 701.8197, 'low_price_m6': 678.67, 'volume_m6': 22538640.0, 'pre_market_m6': None, 'after_hours_m6': None, 'ticker_m7': 'SPY', 'date_m7': datetime.date(2025, 6, 20), 'close_price_m7': 594.28, 'open_price_m7': 598.38, 'high_price_m7': 599.46, 'low_price_m7': 592.86, 'volume_m7': 94051374.0, 'pre_market_m7': None, 'after_hours_m7': None}]
+(Background on this error at: https://sqlalche.me/e/14/gkpj); 406)
+[2025-06-22T18:51:05.755+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 1
+[2025-06-22T18:51:05.765+0000] {taskinstance.py:3281} INFO - 0 downstream tasks scheduled from follow-on schedule check

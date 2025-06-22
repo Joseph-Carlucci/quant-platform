@@ -1,0 +1,42 @@
+[2025-06-22T18:46:04.095+0000] {taskinstance.py:1957} INFO - Dependencies all met for dep_context=non-requeueable deps ti=<TaskInstance: polygon_data_pipeline.fetch_previous_close manual__2025-06-22T18:41:01.641700+00:00 [queued]>
+[2025-06-22T18:46:04.099+0000] {taskinstance.py:1957} INFO - Dependencies all met for dep_context=requeueable deps ti=<TaskInstance: polygon_data_pipeline.fetch_previous_close manual__2025-06-22T18:41:01.641700+00:00 [queued]>
+[2025-06-22T18:46:04.100+0000] {taskinstance.py:2171} INFO - Starting attempt 2 of 3
+[2025-06-22T18:46:04.107+0000] {taskinstance.py:2192} INFO - Executing <Task(PythonOperator): fetch_previous_close> on 2025-06-22 18:41:01.641700+00:00
+[2025-06-22T18:46:04.109+0000] {standard_task_runner.py:60} INFO - Started process 632 to run task
+[2025-06-22T18:46:04.111+0000] {standard_task_runner.py:87} INFO - Running: ['***', 'tasks', 'run', 'polygon_data_pipeline', 'fetch_previous_close', 'manual__2025-06-22T18:41:01.641700+00:00', '--job-id', '13', '--raw', '--subdir', 'DAGS_FOLDER/polygon_data_pipeline.py', '--cfg-path', '/tmp/tmpmmdgz8mg']
+[2025-06-22T18:46:04.113+0000] {standard_task_runner.py:88} INFO - Job 13: Subtask fetch_previous_close
+[2025-06-22T18:46:04.145+0000] {task_command.py:423} INFO - Running <TaskInstance: polygon_data_pipeline.fetch_previous_close manual__2025-06-22T18:41:01.641700+00:00 [running]> on host 4a3c7287a072
+[2025-06-22T18:46:04.187+0000] {taskinstance.py:2481} INFO - Exporting env vars: AIRFLOW_CTX_DAG_OWNER='quant-team' AIRFLOW_CTX_DAG_ID='polygon_data_pipeline' AIRFLOW_CTX_TASK_ID='fetch_previous_close' AIRFLOW_CTX_EXECUTION_DATE='2025-06-22T18:41:01.641700+00:00' AIRFLOW_CTX_TRY_NUMBER='2' AIRFLOW_CTX_DAG_RUN_ID='manual__2025-06-22T18:41:01.641700+00:00'
+[2025-06-22T18:46:04.197+0000] {polygon_data_pipeline.py:79} ERROR - Failed to get Polygon API key: 'Variable polygon_api_key does not exist'
+[2025-06-22T18:46:04.198+0000] {polygon_data_pipeline.py:80} INFO - Please set up the API key using one of these methods:
+[2025-06-22T18:46:04.198+0000] {polygon_data_pipeline.py:81} INFO - 1. Airflow Connection (RECOMMENDED): Admin -> Connections
+[2025-06-22T18:46:04.198+0000] {polygon_data_pipeline.py:82} INFO -    - Conn Id: polygon_api
+[2025-06-22T18:46:04.198+0000] {polygon_data_pipeline.py:83} INFO -    - Conn Type: HTTP
+[2025-06-22T18:46:04.198+0000] {polygon_data_pipeline.py:84} INFO -    - Password: your_api_key
+[2025-06-22T18:46:04.198+0000] {polygon_data_pipeline.py:85} INFO - 2. Environment Variable: POLYGON_API_KEY
+[2025-06-22T18:46:04.199+0000] {polygon_data_pipeline.py:86} INFO - 3. Airflow Variable: polygon_api_key
+[2025-06-22T18:46:04.199+0000] {polygon_data_pipeline.py:87} INFO - Get your free API key at: https://polygon.io/
+[2025-06-22T18:46:04.199+0000] {taskinstance.py:2699} ERROR - Task failed with exception
+Traceback (most recent call last):
+  File "/home/airflow/.local/lib/python3.11/site-packages/airflow/models/taskinstance.py", line 433, in _execute_task
+    result = execute_callable(context=context, **execute_callable_kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/airflow/operators/python.py", line 199, in execute
+    return_value = self.execute_callable()
+                   ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/airflow/operators/python.py", line 216, in execute_callable
+    return self.python_callable(*self.op_args, **self.op_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/airflow/dags/polygon_data_pipeline.py", line 161, in fetch_previous_close_data
+    api_key = get_polygon_api_key()
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/airflow/dags/polygon_data_pipeline.py", line 74, in get_polygon_api_key
+    api_key = Variable.get("polygon_api_key")
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/airflow/.local/lib/python3.11/site-packages/airflow/models/variable.py", line 143, in get
+    raise KeyError(f"Variable {key} does not exist")
+KeyError: 'Variable polygon_api_key does not exist'
+[2025-06-22T18:46:04.205+0000] {taskinstance.py:1138} INFO - Marking task as UP_FOR_RETRY. dag_id=polygon_data_pipeline, task_id=fetch_previous_close, execution_date=20250622T184101, start_date=20250622T184604, end_date=20250622T184604
+[2025-06-22T18:46:04.210+0000] {standard_task_runner.py:107} ERROR - Failed to execute job 13 for task fetch_previous_close ('Variable polygon_api_key does not exist'; 632)
+[2025-06-22T18:46:04.251+0000] {local_task_job_runner.py:234} INFO - Task exited with return code 1
+[2025-06-22T18:46:04.264+0000] {taskinstance.py:3281} INFO - 0 downstream tasks scheduled from follow-on schedule check
