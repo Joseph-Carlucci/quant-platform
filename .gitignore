@@ -100,3 +100,6 @@ secrets.yaml
 airflow.cfg
 airflow.db
 webserver_config.py 
+
+# Claude Code
+.claude
