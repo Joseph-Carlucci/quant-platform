@@ -24,7 +24,7 @@ spec:
         - |
           pip install pandas psycopg2-binary sqlalchemy requests yfinance numpy
           airflow db init
-          airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@admin.com --password admin || true
+          airflow users create --username "$AIRFLOW_ADMIN_USERNAME" --firstname Admin --lastname User --role Admin --email "$AIRFLOW_ADMIN_EMAIL" --password "$AIRFLOW_ADMIN_PASSWORD" || true
         env:
         - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
           value: "postgresql+psycopg2://postgres:quant_password@postgres:5432/airflow"
@@ -33,6 +33,21 @@ spec:
             secretKeyRef:
               name: quant-secrets
               key: polygon-api-key
+        - name: AIRFLOW_ADMIN_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: airflow-admin-username
+        - name: AIRFLOW_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: airflow-admin-password
+        - name: AIRFLOW_ADMIN_EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: airflow-admin-email
         envFrom:
         - configMapRef:
             name: quant-config
@@ -137,4 +152,4 @@ spec:
     name: http
   selector:
     app: airflow
-  type: LoadBalancer  # Creates AWS ELB for external access 
+  type: ClusterIP  # Internal access only - use port-forward or ingress for external access 
