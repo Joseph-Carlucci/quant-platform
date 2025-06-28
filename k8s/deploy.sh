@@ -48,13 +48,14 @@ kubectl apply -f k8s/namespace.yaml
 # Step 3: Apply secrets and config
 echo "🔐 Setting up secrets and configuration..."
 kubectl apply -f k8s/secrets.yaml
+kubectl apply -f k8s/config.yaml 2>/dev/null || echo "ℹ️  No separate config.yaml found (using secrets.yaml)"
 
 # Step 4: Create configmaps from local files
 echo "📋 Creating database init scripts..."
-kubectl create configmap db-init-scripts --from-file=db-init/ -n quant-platform
+kubectl create configmap db-init-scripts --from-file=db-init/ -n quant-platform --dry-run=client -o yaml | kubectl apply -f -
 
 echo "📊 Creating Airflow DAGs..."
-kubectl create configmap airflow-dags --from-file=dags/ -n quant-platform
+kubectl create configmap airflow-dags --from-file=dags/ -n quant-platform --dry-run=client -o yaml | kubectl apply -f -
 
 # Step 5: Deploy services in order
 echo "🗄️  Deploying PostgreSQL..."
@@ -80,24 +81,29 @@ echo ""
 echo "✅ Deployment complete!"
 echo ""
 
-# Get external access information
-echo "🌐 Getting access URLs..."
-echo "⏳ Waiting for LoadBalancers to get external IPs..."
-sleep 30
-
-AIRFLOW_URL=$(kubectl get service airflow -n quant-platform -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-PGADMIN_URL=$(kubectl get service pgadmin -n quant-platform -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+# Get access information
+echo "🌐 Getting access information..."
 
 echo ""
 echo "🎉 Your Quantitative Research Platform is LIVE!"
 echo ""
-echo "📊 Airflow UI: http://${AIRFLOW_URL}:8080"
-echo "   Username: admin"
-echo "   Password: admin"
+echo "🔒 Security Notice: This deployment uses ClusterIP services for security."
+echo "   Access services via port-forwarding for secure connections."
 echo ""
-echo "🐘 pgAdmin: http://${PGADMIN_URL}:5050"  
-echo "   Email: admin@admin.com"
-echo "   Password: admin"
+echo "⚠️  PRODUCTION SECURITY: For production deployments, override default credentials!"
+echo "   Set your own secrets via GitHub repository secrets or environment variables."
+echo ""
+echo "📊 Airflow UI Access:"
+echo "   kubectl port-forward -n quant-platform service/airflow 8080:8080"
+echo "   Then visit: http://localhost:8080"
+echo "   Username: quant_admin"
+echo "   Password: secure_quant_password_2024"
+echo ""
+echo "🐘 pgAdmin Access:"
+echo "   kubectl port-forward -n quant-platform service/pgadmin 5050:80"
+echo "   Then visit: http://localhost:5050"
+echo "   Email: admin@quantplatform.local"
+echo "   Password: secure_pgadmin_password_2024"
 echo ""
 
 echo "🔧 Useful commands:"
