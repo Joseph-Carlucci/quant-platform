@@ -1,25 +1,40 @@
 # Quantitative Research Platform 📈
 
-A production-ready quantitative research platform built with Apache Airflow, PostgreSQL, and real-time market data from Polygon.io. This platform automatically collects, processes, and stores market data for analysis and strategy development.
+A modular, production-ready quantitative research platform built with clean layered architecture. This platform demonstrates the complete end-to-end workflow from data ingestion to model execution to performance testing.
 
 ## 🚀 Features
 
-- **Real-time Market Data**: Integration with Polygon.io API (unlimited calls supported)
-- **Automated Data Pipeline**: Runs every 6 hours via Apache Airflow
-- **Robust Data Storage**: PostgreSQL with proper schema and upsert capabilities
-- **Production Ready**: Docker containerized with proper error handling and logging
+- **Layered Architecture**: Clean separation between data, models, and orchestration layers
+- **End-to-End Example**: Complete workflow from data ingestion to performance testing
+- **Production Ready**: Docker containerized with comprehensive error handling and monitoring
+- **Modular Design**: Easy to extend with new strategies and data sources
+- **Performance Analytics**: Automated model evaluation and ranking system
 - **Web UI Management**: Airflow and pgAdmin interfaces for monitoring and data exploration
-- **Scalable Architecture**: Ready for cloud deployment (EC2, etc.)
 
-## 📊 Data Sources
+## 🏗️ Architecture Overview
 
-Currently ingests data for: **AAPL, GOOGL, MSFT, TSLA, AMZN, NVDA, META, SPY**
+The platform follows a clean layered architecture:
 
-### Data Types Collected:
-- **Previous Close Prices**: Latest closing prices with OHLCV data
-- **Company Details**: Market cap, employee count, descriptions, and metadata
-- **Daily Aggregates**: Historical OHLCV data with volume and VWAP
-- **Ticker Information**: Exchange details, currency, and market classification
+### **Data Layer** (`data_layer/`)
+- Market data ingestion from Polygon.io
+- Technical indicator calculation
+- Feature engineering and storage
+- Data validation and quality checks
+
+### **Models Layer** (`models/`)
+- Trading strategy implementations
+- Enhanced momentum strategy (example)
+- Base strategy framework for extensibility
+
+### **Orchestration Layer** (`dags/`)
+- End-to-end data ingestion pipeline
+- Model execution and signal generation
+- Performance testing and evaluation
+
+### **Infrastructure Layer** (`infrastructure/`)
+- Common utilities and configuration
+- Database schema management
+- Logging and monitoring foundations
 
 ## 🛠️ Tech Stack
 
@@ -62,47 +77,58 @@ docker-compose ps
 - **pgAdmin**: http://localhost:5050 (admin@admin.com/admin)
 - **PostgreSQL**: localhost:5432 (quant_user/quant_password)
 
-### 4. Run Data Pipeline
+### 4. Run End-to-End Example
 1. Open Airflow UI at http://localhost:8080
-2. Enable the `polygon_data_pipeline` DAG
-3. Trigger a manual run to test
+2. Enable the three end-to-end DAGs:
+   - `end_to_end_data_ingestion`
+   - `end_to_end_model_execution` 
+   - `end_to_end_performance_testing`
+3. Trigger the data ingestion DAG first to populate data
 
-## 📈 Data Pipeline Architecture
+## 📈 End-to-End Workflow
 
 ```
-Polygon.io API → Airflow DAG → Data Processing → PostgreSQL
-                      ↓
-           Error Handling & Retry Logic
-                      ↓
-              Upsert (No Duplicates)
+Data Ingestion → Model Execution → Performance Testing
+       ↓               ↓                ↓
+  Market Data    Trading Signals   Model Rankings
+  Features       Risk Metrics      Performance Reports
+  Quality        Confidence        Alert Generation
+  Validation     Scoring           Trend Analysis
 ```
 
-### Pipeline Tasks:
-1. **create_tables**: Sets up database schema
-2. **fetch_previous_close**: Gets latest market prices
-3. **fetch_ticker_details**: Collects company information  
-4. **fetch_daily_aggregates**: Retrieves historical data
+### Pipeline Components:
+1. **Data Ingestion**: Fetch market data, calculate features, validate quality
+2. **Model Execution**: Run trading strategies, generate signals, track performance
+3. **Performance Testing**: Evaluate models, rank performance, generate reports
 
 ## 🗄️ Database Schema
 
 ```sql
--- Market data is stored in organized tables:
-market_data.previous_close      -- Latest prices and volumes
-market_data.ticker_details      -- Company fundamentals
-market_data.daily_aggregates    -- Historical OHLCV data
+-- Core data tables
+market_data              -- Daily OHLCV data from external sources
+trading_universe         -- Active tradeable symbols with metadata
+feature_store            -- JSON-based feature storage for models
+
+-- Model framework
+models                   -- Model registry with configurations  
+model_runs               -- Execution tracking and status
+signals                  -- Model-generated trading signals
+
+-- Performance framework
+model_performance        -- Comprehensive performance metrics
+performance_reports      -- Daily comparative analysis and rankings
 ```
 
 ## 🔧 Configuration Options
 
-### API Key Setup (Multiple Methods):
-1. **Environment Variable** (Recommended): Set `POLYGON_API_KEY` in `.env`
-2. **Airflow Connection**: Admin → Connections → polygon_api
-3. **Airflow Variable**: Admin → Variables → polygon_api_key
+### API Key Setup:
+Set `POLYGON_API_KEY` in `.env` file (required for data ingestion)
 
 ### Customization:
-- **Add Tickers**: Modify `MVP_TICKERS` in `dags/polygon_data_pipeline.py`
-- **Change Schedule**: Adjust `schedule_interval` in DAG definition
-- **Database Settings**: Update connection strings in `docker-compose.yml`
+- **Add Symbols**: Modify `UNIVERSE_SYMBOLS` in `dags/end_to_end_data_ingestion.py`
+- **Add Strategies**: Create new strategy classes in `models/strategies/`
+- **Extend Features**: Add calculations in data ingestion DAG
+- **Custom Metrics**: Modify performance testing DAG
 
 ## 🚀 Production Deployment
 
@@ -125,23 +151,23 @@ aws ssm put-parameter --name "/quant-platform/polygon-api-key" --value "your_key
 ## 📊 Sample Queries
 
 ```sql
--- Latest stock prices
-SELECT ticker, close_price, volume, date 
-FROM market_data.previous_close 
-ORDER BY date DESC;
+-- Latest trading signals
+SELECT s.*, m.model_name 
+FROM signals s 
+JOIN models m ON s.model_id = m.id
+ORDER BY s.created_at DESC LIMIT 10;
 
--- Company market caps
-SELECT ticker, name, market_cap, total_employees 
-FROM market_data.ticker_details 
-WHERE market_cap IS NOT NULL
-ORDER BY market_cap DESC;
+-- Model performance comparison
+SELECT mp.*, m.model_name
+FROM model_performance mp
+JOIN models m ON mp.model_id = m.id
+ORDER BY mp.sharpe_ratio DESC;
 
--- Price trends
-SELECT ticker, date, close_price, volume
-FROM market_data.daily_aggregates 
-WHERE ticker = 'AAPL'
-ORDER BY date DESC
-LIMIT 30;
+-- Market data with features
+SELECT md.symbol, md.date, md.close_price, fs.features
+FROM market_data md
+JOIN feature_store fs ON md.symbol = fs.symbol AND md.date = fs.date
+WHERE md.date >= CURRENT_DATE - INTERVAL '7 days';
 ```
 
 ## 🔍 Monitoring & Troubleshooting
@@ -154,18 +180,25 @@ docker-compose logs postgres
 ```
 
 ### Common Issues:
-- **DAG not appearing**: Check syntax with `docker exec quant-airflow python /opt/airflow/dags/polygon_data_pipeline.py`
-- **API rate limits**: Upgrade Polygon.io plan or adjust schedule
-- **Database errors**: Check PostgreSQL logs and connection settings
+- **DAG not appearing**: Check syntax with `docker exec quant-airflow python /opt/airflow/dags/<dag_name>.py`
+- **API rate limits**: Upgrade Polygon.io plan or adjust schedule intervals
+- **Database errors**: Check PostgreSQL logs and verify schema is applied
+- **Model execution failures**: Ensure market data exists for execution date
 
 ## 🎯 Next Steps
 
-1. **Add Analytics**: Build Jupyter notebooks for data analysis
-2. **Expand Data Sources**: Integrate Alpha Vantage, Yahoo Finance, etc.
-3. **Create Strategies**: Implement backtesting frameworks
-4. **Scale Infrastructure**: Move to cloud services (AWS RDS, ECS, etc.)
-5. **Add Real-time Feeds**: WebSocket integration for live data
-6. **Build Dashboards**: Create visualization interfaces
+1. **Add New Strategies**: Implement mean reversion, ML-based models
+2. **Expand Data Sources**: Alternative data, news sentiment, economic indicators
+3. **Real-time Processing**: WebSocket integration for live signals
+4. **Advanced Analytics**: Risk attribution, portfolio optimization
+5. **Backtesting Framework**: Historical strategy validation
+6. **Production Trading**: Broker integration for live execution
+
+## 📚 Documentation
+
+- **[Architecture Guide](ARCHITECTURE.md)**: Detailed system architecture
+- **[End-to-End Example](END_TO_END_EXAMPLE.md)**: Complete workflow walkthrough
+- **[Quick Start Guide](QUICK_START.md)**: Fast setup instructions
 
 ## 📝 License
 
