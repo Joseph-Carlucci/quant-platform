@@ -129,6 +129,53 @@ Edit `dags/end_to_end_model_execution.py`:
 }
 ```
 
+## 🔒 Security Configuration
+
+### Default Credentials (IMPORTANT!)
+
+For security, the platform uses secure default credentials instead of `admin/admin`. The defaults are:
+
+**Airflow Web UI:**
+- Username: `quant_admin`
+- Password: `secure_quant_password_2024`
+- Email: `admin@quantplatform.local`
+
+**pgAdmin:**
+- Email: `admin@quantplatform.local`
+- Password: `secure_pgadmin_password_2024`
+
+### Override Credentials
+
+**For production deployments, always override these defaults!** Create a `.env` file:
+
+```bash
+cp env.example .env
+```
+
+Then edit `.env` to set your own secure credentials:
+
+```bash
+# Your secure Airflow admin credentials
+AIRFLOW_ADMIN_USERNAME=your_username
+AIRFLOW_ADMIN_PASSWORD=your_secure_password
+AIRFLOW_ADMIN_EMAIL=admin@yourcompany.com
+
+# Your secure pgAdmin credentials  
+PGADMIN_EMAIL=admin@yourcompany.com
+PGADMIN_PASSWORD=your_secure_pgadmin_password
+```
+
+### Kubernetes Deployment Security
+
+For Kubernetes deployments, the platform uses `ClusterIP` service type for internal access only. To access Airflow:
+
+```bash
+# Port forward to access Airflow securely
+kubectl port-forward -n quant-platform service/airflow 8080:8080
+
+# Then access via http://localhost:8080
+```
+
 ## 🐛 Common Issues
 
 ### DAG Not Appearing

@@ -36,18 +36,31 @@ echo "   Value: YOUR_POLYGON_IO_API_KEY"
 echo "   Get it from: https://polygon.io/"
 echo ""
 
+# Airflow Admin Credentials (Security Critical)
+echo "6. AIRFLOW_ADMIN_USERNAME"
+echo "   Value: your_secure_admin_username"
+echo ""
+
+echo "7. AIRFLOW_ADMIN_PASSWORD"
+echo "   Value: your_secure_admin_password"
+echo ""
+
+echo "8. AIRFLOW_ADMIN_EMAIL"
+echo "   Value: admin@yourcompany.com"
+echo ""
+
 # Optional secrets for advanced features
 echo "📋 Optional Secrets (for future expansion):"
 echo ""
-echo "6. ALPHA_VANTAGE_API_KEY (optional)"
+echo "9. ALPHA_VANTAGE_API_KEY (optional)"
 echo "   Value: YOUR_ALPHA_VANTAGE_KEY"
 echo ""
 
-echo "7. SLACK_WEBHOOK_URL (optional, for notifications)"
+echo "10. SLACK_WEBHOOK_URL (optional, for notifications)"
 echo "   Value: YOUR_SLACK_WEBHOOK_URL"
 echo ""
 
-echo "8. DISCORD_WEBHOOK_URL (optional, for notifications)"
+echo "11. DISCORD_WEBHOOK_URL (optional, for notifications)"
 echo "   Value: YOUR_DISCORD_WEBHOOK_URL"
 echo ""
 

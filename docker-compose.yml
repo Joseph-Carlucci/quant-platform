@@ -97,6 +97,8 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'              # Don't load example DAGs
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false' # Auto-enable new DAGs
       AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'          # Show config in UI
+      AIRFLOW__WEBSERVER__WARN_DEPLOYMENT_EXPOSURE: 'false' # Disable public exposure warning
+      AIRFLOW__WEBSERVER__SECRET_KEY: 'quant_platform_secret_key_2024' # Secret key for sessions
       
       # API Keys and external service configuration
       POLYGON_API_KEY: ${POLYGON_API_KEY:-}              # Optional: set via .env file or environment
@@ -119,7 +121,7 @@ services:
     command: >
       bash -c "
         airflow db init &&
-        airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@admin.com --password admin &&
+        airflow users create --username \${AIRFLOW_ADMIN_USERNAME:-quant_admin} --firstname Admin --lastname User --role Admin --email \${AIRFLOW_ADMIN_EMAIL:-admin@quantplatform.local} --password \${AIRFLOW_ADMIN_PASSWORD:-secure_quant_password_2024} &&
         rm -f /opt/airflow/airflow-webserver.pid &&
         airflow webserver --port 8080 --host 0.0.0.0 & airflow scheduler
       "
@@ -133,15 +135,15 @@ services:
   # - Data exploration and analysis
   # - Performance monitoring
   #
-  # Access via http://localhost:5050 with admin@admin.com / admin
+  # Access via http://localhost:5050 with credentials from environment variables
   # Useful for inspecting ingested data and troubleshooting database issues.
   # ==============================================================================
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: quant-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com    # Login email
-      PGADMIN_DEFAULT_PASSWORD: admin           # Login password (change in production!)
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@quantplatform.local}    # Login email
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-secure_pgadmin_password_2024}   # Login password
     ports:
       - "5050:80"                              # Web interface
     depends_on:
