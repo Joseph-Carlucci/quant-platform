@@ -39,9 +39,7 @@ jobs:
           "k8s/redis.yaml" 
           "k8s/airflow.yaml"
           "k8s/pgadmin.yaml"
-          "k8s/config.yaml"
-          "k8s/secrets.yaml"
-          "init.sql"
+          "init-db.sql"
         )
         
         for file in "${required_files[@]}"; do
@@ -142,33 +140,33 @@ jobs:
         
         echo "✅ All DAG files have valid Python syntax"
         
-    - name: Validate init.sql
+    - name: Validate init-db.sql
       run: |
-        echo "Validating init.sql file..."
+        echo "Validating init-db.sql file..."
         
-        if [[ -f "init.sql" ]]; then
-          echo "✅ init.sql exists"
+        if [[ -f "init-db.sql" ]]; then
+          echo "✅ init-db.sql exists"
           
           # Basic validation - check for common SQL keywords
-          if grep -q "CREATE DATABASE\|CREATE USER\|GRANT" init.sql; then
-            echo "✅ init.sql contains expected database initialization commands"
+          if grep -q "CREATE DATABASE\|CREATE USER\|GRANT" init-db.sql; then
+            echo "✅ init-db.sql contains expected database initialization commands"
           else
-            echo "⚠️  init.sql may be missing database initialization commands"
+            echo "⚠️  init-db.sql may be missing database initialization commands"
           fi
           
           # Check file size
-          file_size=$(wc -c < init.sql)
-          echo "init.sql size: $file_size bytes"
+          file_size=$(wc -c < init-db.sql)
+          echo "init-db.sql size: $file_size bytes"
           
           # Check for required databases
-          if grep -q "CREATE DATABASE airflow" init.sql; then
+          if grep -q "CREATE DATABASE airflow" init-db.sql; then
             echo "✅ Airflow database creation found"
           else
             echo "❌ Airflow database creation missing"
             exit 1
           fi
           
-          if grep -q "CREATE DATABASE quant_data" init.sql; then
+          if grep -q "CREATE DATABASE quant_data" init-db.sql; then
             echo "✅ Quant data database creation found"
           else
             echo "❌ Quant data database creation missing"
@@ -176,7 +174,7 @@ jobs:
           fi
           
         else
-          echo "❌ init.sql is missing"
+          echo "❌ init-db.sql is missing"
           exit 1
         fi
         
