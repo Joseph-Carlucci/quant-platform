@@ -9,7 +9,7 @@ A modular, production-ready quantitative research platform built with clean laye
 - **Production Ready**: Docker containerized with comprehensive error handling and monitoring
 - **Modular Design**: Easy to extend with new strategies and data sources
 - **Performance Analytics**: Automated model evaluation and ranking system
-- **Web UI Management**: Airflow and pgAdmin interfaces for monitoring and data exploration
+- **Web UI Management**: Airflow interface for monitoring and data pipeline management
 
 ## 🏗️ Architecture Overview
 
@@ -43,7 +43,7 @@ The platform follows a clean layered architecture:
 - **Data Processing**: Python, Pandas, SQLAlchemy
 - **API Integration**: Polygon.io REST API
 - **Containerization**: Docker & Docker Compose
-- **Admin Interface**: pgAdmin 4
+- **Database Access**: Direct PostgreSQL connection via port-forwarding
 
 ## ⚡ Quick Start
 
@@ -74,8 +74,7 @@ docker-compose ps
 
 ### 3. Access Services
 - **Airflow Web UI**: http://localhost:8080 (admin/admin)
-- **pgAdmin**: http://localhost:5050 (admin@admin.com/admin)
-- **PostgreSQL**: localhost:5432 (quant_user/quant_password)
+- **PostgreSQL**: Use `./connect-prod.sh` then connect to localhost:15432
 
 ### 4. Run End-to-End Example
 1. Open Airflow UI at http://localhost:8080

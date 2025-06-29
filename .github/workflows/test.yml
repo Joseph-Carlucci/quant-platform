@@ -38,7 +38,6 @@ jobs:
           "k8s/postgres.yaml"
           "k8s/redis.yaml" 
           "k8s/airflow.yaml"
-          "k8s/pgadmin.yaml"
           "init-db.sql"
         )
         
@@ -192,7 +191,6 @@ jobs:
         echo "  - PostgreSQL (persistent database)"
         echo "  - Redis (caching and session management)"
         echo "  - Airflow (data pipeline orchestration)"
-        echo "  - pgAdmin (database administration)"
         echo ""
         echo "DAG files that will be loaded:"
         find dags -name "*.py" -exec basename {} \; | sed 's/^/  - /' 

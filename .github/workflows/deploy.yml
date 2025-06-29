@@ -88,7 +88,6 @@ jobs:
         kubectl apply -f k8s/postgres.yaml
         kubectl apply -f k8s/redis.yaml
         kubectl apply -f k8s/airflow.yaml
-        kubectl apply -f k8s/pgadmin.yaml
         
     - name: Wait for deployments to be ready
       run: |
@@ -100,9 +99,6 @@ jobs:
         
         echo "Waiting for Airflow to be ready..."
         kubectl wait --for=condition=available --timeout=600s deployment/airflow -n ${{ env.NAMESPACE }}
-        
-        echo "Waiting for pgAdmin to be ready..."
-        kubectl wait --for=condition=available --timeout=300s deployment/pgadmin -n ${{ env.NAMESPACE }}
         
     - name: Update DAGs
       run: |
@@ -142,11 +138,11 @@ jobs:
         echo "   Username: Set via AIRFLOW_ADMIN_USERNAME secret"
         echo "   Password: Set via AIRFLOW_ADMIN_PASSWORD secret"
         echo ""
-        echo "🐘 pgAdmin Access:"
-        echo "   kubectl port-forward -n ${{ env.NAMESPACE }} service/pgadmin 5050:80"
-        echo "   Then visit: http://localhost:5050"
-        echo "   Email: Set via PGADMIN_EMAIL environment or default"
-        echo "   Password: Set via PGADMIN_PASSWORD secret"
+        echo "🐘 PostgreSQL Direct Access:"
+        echo "   kubectl port-forward -n ${{ env.NAMESPACE }} service/postgres 15432:5432"
+        echo "   Then connect with your preferred PostgreSQL client:"
+        echo "   Host: localhost, Port: 15432, User: postgres"
+        echo "   Password: Set via POSTGRES_PASSWORD secret"
         echo ""
         echo "⚠️  Remember to set your GitHub repository secrets for production!"
         
