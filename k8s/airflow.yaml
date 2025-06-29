@@ -24,7 +24,8 @@ spec:
         - |
           pip install pandas psycopg2-binary sqlalchemy requests yfinance numpy
           airflow db init
-          airflow users create --username "$AIRFLOW_ADMIN_USERNAME" --firstname Admin --lastname User --role Admin --email "$AIRFLOW_ADMIN_EMAIL" --password "$AIRFLOW_ADMIN_PASSWORD" || true
+          airflow users delete --username "$AIRFLOW_ADMIN_USERNAME" || true
+          airflow users create --username "$AIRFLOW_ADMIN_USERNAME" --firstname Admin --lastname User --role Admin --email "$AIRFLOW_ADMIN_EMAIL" --password "$AIRFLOW_ADMIN_PASSWORD"
         env:
         - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
           valueFrom:
