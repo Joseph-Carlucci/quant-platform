@@ -68,13 +68,24 @@ echo "⏳ Waiting for PostgreSQL to be ready..."
 kubectl wait --for=condition=available --timeout=300s deployment/postgres -n quant-platform
 
 echo "🌊 Deploying Airflow..."
-kubectl apply -f k8s/airflow.yaml
+echo "📦 Creating Airflow storage..."
+kubectl apply -f k8s/airflow-storage.yaml
+
+echo "🔐 Setting up Airflow RBAC..."
+kubectl apply -f k8s/airflow-rbac.yaml
+
+echo "📅 Deploying Airflow scheduler..."
+kubectl apply -f k8s/airflow-scheduler.yaml
+
+echo "🖥️  Deploying Airflow webserver..."
+kubectl apply -f k8s/airflow-webserver.yaml
 
 echo "🐘 Deploying pgAdmin..."
 kubectl apply -f k8s/pgadmin.yaml
 
 echo "⏳ Waiting for all services to be ready..."
-kubectl wait --for=condition=available --timeout=600s deployment/airflow -n quant-platform
+kubectl wait --for=condition=available --timeout=600s deployment/airflow-scheduler -n quant-platform
+kubectl wait --for=condition=available --timeout=600s deployment/airflow-webserver -n quant-platform
 kubectl wait --for=condition=available --timeout=300s deployment/pgadmin -n quant-platform
 
 echo ""
@@ -119,8 +130,10 @@ echo "   GitHub secrets setup: GITHUB_SECRETS_SETUP.md"
 echo ""
 echo "🔧 Useful commands:"
 echo "   View all pods: kubectl get pods -n quant-platform"
-echo "   View logs: kubectl logs -f deployment/airflow -n quant-platform"
-echo "   Scale Airflow: kubectl scale deployment airflow --replicas=2 -n quant-platform"
+echo "   View scheduler logs: kubectl logs -f deployment/airflow-scheduler -n quant-platform"
+echo "   View webserver logs: kubectl logs -f deployment/airflow-webserver -n quant-platform"
+echo "   Scale Airflow scheduler: kubectl scale deployment airflow-scheduler --replicas=2 -n quant-platform"
+echo "   Scale Airflow webserver: kubectl scale deployment airflow-webserver --replicas=2 -n quant-platform"
 echo "   Update DAGs: kubectl create configmap airflow-dags --from-file=dags/ -n quant-platform --dry-run=client -o yaml | kubectl apply -f -"
 echo ""
 echo "🧹 To cleanup everything: eksctl delete cluster --name quant-platform --region us-east-1"
