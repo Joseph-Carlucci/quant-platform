@@ -111,22 +111,15 @@ jobs:
         echo "🔗 Connect with ./connect-prod.sh to verify in Airflow UI"
         echo "🔧 Secrets updated for proper authentication"
         
-    - name: Update Airflow admin user
+    - name: Restart Airflow to pick up latest changes
       run: |
-        echo "🔄 Updating Airflow admin user with latest credentials..."
+        echo "🔄 Restarting Airflow to pick up new DAGs and secrets..."
         
-        # Wait for Airflow to be ready
-        kubectl wait --for=condition=available --timeout=600s deployment/airflow -n ${{ env.NAMESPACE }}
-        
-        # Get the Airflow pod name
-        AIRFLOW_POD=$(kubectl get pods -n ${{ env.NAMESPACE }} -l app=airflow -o jsonpath='{.items[0].metadata.name}')
-        
-        # Delete existing admin user if it exists
-        kubectl exec $AIRFLOW_POD -c airflow-scheduler -n ${{ env.NAMESPACE }} -- airflow users delete --username admin || echo "No existing admin user to delete"
-        
-        # Restart Airflow to recreate admin user with new credentials
+        # Restart Airflow deployment (picks up new secrets, DAGs, etc.)
         kubectl rollout restart deployment/airflow -n ${{ env.NAMESPACE }}
         kubectl rollout status deployment/airflow -n ${{ env.NAMESPACE }} --timeout=600s
+        
+        echo "✅ Airflow restarted with latest configuration"
         
     - name: Get access information
       run: |
