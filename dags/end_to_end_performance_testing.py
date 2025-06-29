@@ -68,19 +68,20 @@ def get_active_models(**context):
         # Get models with recent signal activity
         query = """
         SELECT DISTINCT
-            ts.model_id,
-            ts.model_name,
-            ts.model_type,
-            ts.version,
-            COUNT(ts.signal_id) as recent_signals,
-            MAX(ts.created_at) as last_signal_time,
-            AVG(ts.confidence_score) as avg_confidence
-        FROM trading_signals ts
-        WHERE ts.created_at >= CURRENT_DATE - INTERVAL '30 days'
-        AND model_id IS NOT NULL
-        GROUP BY ts.model_id, ts.model_name, ts.model_type, ts.version
-        HAVING COUNT(ts.signal_id) >= 5  -- Minimum signals for meaningful analysis
-        AND model_id IS NOT NULL
+            s.model_id,
+            m.model_name,
+            m.strategy_type as model_type,
+            'v1.0' as version,
+            COUNT(s.id) as recent_signals,
+            MAX(s.created_at) as last_signal_time,
+            AVG(s.confidence) as avg_confidence
+        FROM signals s
+        JOIN models m ON s.model_id = m.id
+        WHERE s.created_at >= CURRENT_DATE - INTERVAL '30 days'
+        AND s.model_id IS NOT NULL
+        AND m.status = 'active'
+        GROUP BY s.model_id, m.model_name, m.strategy_type
+        HAVING COUNT(s.id) >= 5  -- Minimum signals for meaningful analysis
         ORDER BY last_signal_time DESC
         """
         
@@ -122,33 +123,33 @@ def calculate_model_performance(model_id: str, **context):
         # Get model signals with actual returns
         signals_query = """
         SELECT 
-            ts.signal_id,
-            ts.symbol,
-            ts.signal_type,
-            ts.signal_strength,
-            ts.price_target,
-            ts.stop_loss,
-            ts.confidence_score,
-            ts.created_at as signal_time,
-            ts.expected_return,
+            s.id as signal_id,
+            s.symbol,
+            s.signal_type,
+            1.0 as signal_strength,
+            NULL as price_target,
+            NULL as stop_loss,
+            s.confidence as confidence_score,
+            s.created_at as signal_time,
+            NULL as expected_return,
             
             -- Get actual price data for performance calculation
             md_entry.close_price as entry_price,
             md_exit.close_price as exit_price,
             md_exit.date as exit_date
             
-        FROM trading_signals ts
+        FROM signals s
         LEFT JOIN market_data md_entry ON (
-            ts.symbol = md_entry.symbol 
-            AND DATE(ts.created_at) = md_entry.date
+            s.symbol = md_entry.symbol 
+            AND s.signal_date = md_entry.date
         )
         LEFT JOIN market_data md_exit ON (
-            ts.symbol = md_exit.symbol 
-            AND md_exit.date = DATE(ts.created_at) + INTERVAL '5 days'  -- 5-day holding period
+            s.symbol = md_exit.symbol 
+            AND md_exit.date = s.signal_date + INTERVAL '5 days'  -- 5-day holding period
         )
-        WHERE ts.model_id = %(model_id)s
-        AND ts.created_at >= CURRENT_DATE - INTERVAL '30 days'
-        ORDER BY ts.created_at DESC
+        WHERE s.model_id = %(model_id)s
+        AND s.created_at >= CURRENT_DATE - INTERVAL '30 days'
+        ORDER BY s.created_at DESC
         """
         
         with engine.connect() as conn:
@@ -263,20 +264,14 @@ def generate_performance_report(**context):
         query = """
         SELECT 
             mp.*,
-            ms.model_name,
-            ms.model_type,
-            ms.version,
-            ROW_NUMBER() OVER (PARTITION BY mp.model_id ORDER BY mp.run_date DESC) as rn
+            m.model_name,
+            m.strategy_type as model_type,
+            'v1.0' as version,
+            ROW_NUMBER() OVER (PARTITION BY mp.model_id ORDER BY mp.evaluation_date DESC) as rn
         FROM model_performance mp
-        JOIN (
-            SELECT DISTINCT model_id, 
-                   FIRST_VALUE(model_name) OVER (PARTITION BY model_id ORDER BY created_at DESC) as model_name,
-                   FIRST_VALUE(model_type) OVER (PARTITION BY model_id ORDER BY created_at DESC) as model_type,
-                   FIRST_VALUE(version) OVER (PARTITION BY model_id ORDER BY created_at DESC) as version
-            FROM trading_signals 
-            WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
-        ) ms ON mp.model_id = ms.model_id
-        WHERE mp.run_date >= CURRENT_DATE - INTERVAL '7 days'
+        JOIN models m ON mp.model_id = m.id
+        WHERE mp.evaluation_date >= CURRENT_DATE - INTERVAL '7 days'
+        AND m.status = 'active'
         """
         
         with engine.connect() as conn:
@@ -387,16 +382,16 @@ def update_model_rankings(**context):
         
         # Get current rankings
         query = """
-        SELECT model_id, overall_score, avg_return
+        SELECT model_id, overall_score, total_return
         FROM (
             SELECT 
                 mp.model_id,
-                mp.avg_return,
-                (COALESCE(mp.sharpe_ratio, 0) * 0.3 + COALESCE(mp.avg_return, 0) * 0.25 + COALESCE(mp.win_rate, 0) * 0.2 + 
-                 COALESCE(mp.prediction_accuracy, 0) * 0.15 + (1 / (1 + ABS(COALESCE(mp.max_drawdown, 0)))) * 0.1) as overall_score,
-                ROW_NUMBER() OVER (PARTITION BY mp.model_id ORDER BY mp.run_date DESC) as rn
+                mp.total_return,
+                (COALESCE(mp.sharpe_ratio, 0) * 0.4 + COALESCE(mp.total_return, 0) * 0.3 + COALESCE(mp.win_rate, 0) * 0.3 + 
+                 (1 / (1 + ABS(COALESCE(mp.max_drawdown, 0)))) * 0.1) as overall_score,
+                ROW_NUMBER() OVER (PARTITION BY mp.model_id ORDER BY mp.evaluation_date DESC) as rn
             FROM model_performance mp
-            WHERE mp.run_date >= CURRENT_DATE - INTERVAL '7 days'
+            WHERE mp.evaluation_date >= CURRENT_DATE - INTERVAL '7 days'
         ) ranked
         WHERE rn = 1
         ORDER BY overall_score DESC
@@ -406,7 +401,7 @@ def update_model_rankings(**context):
             df = pd.read_sql(query, conn)
         
         # Identify models that need attention
-        underperforming_models = df[df['avg_return'] < -0.02]  # Less than -2% average return
+        underperforming_models = df[df['total_return'] < -0.02]  # Less than -2% total return
         top_performers = df.head(3)
         
         # Update model status in database

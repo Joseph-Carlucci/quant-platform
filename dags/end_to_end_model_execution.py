@@ -199,7 +199,7 @@ def load_market_data_and_features(**context) -> Dict[str, Any]:
     
     # Get active universe
     universe_sql = """
-    SELECT symbol as ticker, company_name, sector, industry 
+    SELECT symbol as ticker, sector, market_cap_category
     FROM trading_universe 
     WHERE is_active = TRUE
     ORDER BY symbol
@@ -217,7 +217,7 @@ def load_market_data_and_features(**context) -> Dict[str, Any]:
     
     # Load market data for execution date
     market_data_sql = """
-    SELECT symbol as ticker, date, open_price, high_price, low_price, close_price, volume, vwap
+    SELECT symbol as ticker, date, open_price, high_price, low_price, close_price, volume
     FROM market_data 
     WHERE date = %(execution_date)s AND symbol = ANY(%(symbols)s)
     ORDER BY symbol
@@ -230,11 +230,11 @@ def load_market_data_and_features(**context) -> Dict[str, Any]:
             params={'execution_date': execution_date, 'symbols': symbols}
         )
     
-    # Load features for execution date from feature_store
+    # Load features for execution date from technical_features
     features_sql = """
     SELECT symbol as ticker, features
-    FROM feature_store 
-    WHERE date = %(execution_date)s AND symbol = ANY(%(symbols)s) AND feature_set = 'technical_v1'
+    FROM technical_features 
+    WHERE date = %(execution_date)s AND symbol = ANY(%(symbols)s)
     ORDER BY symbol
     """
     
@@ -486,33 +486,30 @@ def generate_execution_summary(**context) -> Dict[str, Any]:
     
     engine = create_engine(POSTGRES_CONN_STRING)
     
-    # Get execution summary
+    # Get execution summary from available tables
     summary_sql = """
     SELECT 
-        COUNT(*) as total_runs,
-        COUNT(*) FILTER (WHERE status = 'completed') as completed_runs,
-        COUNT(*) FILTER (WHERE status = 'failed') as failed_runs,
-        SUM(signals_generated) as total_signals,
-        AVG(EXTRACT(EPOCH FROM (end_time - start_time))) as avg_execution_time
-    FROM model_runs 
-    WHERE run_date = %(execution_date)s;
+        COUNT(DISTINCT m.id) as total_models,
+        COUNT(DISTINCT s.model_id) as models_with_signals,
+        COUNT(s.id) as total_signals
+    FROM models m
+    LEFT JOIN signals s ON m.id = s.model_id AND s.signal_date = %(execution_date)s;
     """
     
     with engine.connect() as conn:
         summary_result = pd.read_sql(summary_sql, conn, params={'execution_date': execution_date})
-        summary = summary_result.iloc[0] if not summary_result.empty else [0, 0, 0, 0, 0]
+        summary = summary_result.iloc[0] if not summary_result.empty else {'total_models': 0, 'models_with_signals': 0, 'total_signals': 0}
     
     # Get model-specific results
     model_results_sql = """
     SELECT 
         m.model_name,
-        mr.status,
-        mr.signals_generated,
-        mr.error_message,
-        EXTRACT(EPOCH FROM (mr.end_time - mr.start_time)) as execution_time
-    FROM model_runs mr
-    JOIN models m ON mr.model_id = m.id
-    WHERE mr.run_date = %(execution_date)s
+        m.status,
+        COUNT(s.id) as signals_generated
+    FROM models m
+    LEFT JOIN signals s ON m.id = s.model_id AND s.signal_date = %(execution_date)s
+    WHERE m.status = 'active'
+    GROUP BY m.id, m.model_name, m.status
     ORDER BY m.model_name;
     """
     
@@ -520,49 +517,43 @@ def generate_execution_summary(**context) -> Dict[str, Any]:
         model_results_df = pd.read_sql(model_results_sql, conn, params={'execution_date': execution_date})
     
     # Calculate quality metrics
-    total_runs = int(summary['total_runs']) if summary['total_runs'] else 0
-    completed_runs = int(summary['completed_runs']) if summary['completed_runs'] else 0
-    failed_runs = int(summary['failed_runs']) if summary['failed_runs'] else 0
+    total_models = int(summary['total_models']) if summary['total_models'] else 0
+    models_with_signals = int(summary['models_with_signals']) if summary['models_with_signals'] else 0
     total_signals = int(summary['total_signals']) if summary['total_signals'] else 0
-    avg_execution_time = float(summary['avg_execution_time']) if summary['avg_execution_time'] else 0
     
-    success_rate = (completed_runs / total_runs * 100) if total_runs > 0 else 0
+    success_rate = (models_with_signals / total_models * 100) if total_models > 0 else 0
     
     # Check for alerts
     alerts = []
     if success_rate < 80:
         alerts.append(f"Low success rate: {success_rate:.1f}%")
     
-    if failed_runs > 0:
-        failed_models = model_results_df[model_results_df['status'] == 'failed']['model_name'].tolist()
-        alerts.append(f"Failed models: {', '.join(failed_models)}")
+    # Check for inactive models
+    if total_models > models_with_signals:
+        inactive_count = total_models - models_with_signals
+        alerts.append(f"Models without signals: {inactive_count}")
     
     if total_signals == 0:
         alerts.append("No signals generated")
     
-    if avg_execution_time > 300:  # 5 minutes
-        alerts.append(f"Long execution time: {avg_execution_time:.1f}s")
+    # Note: Execution time tracking not available in current schema
     
     # Log summary
     logger.info(f"Execution Summary for {execution_date}:")
-    logger.info(f"  Total Runs: {total_runs}")
-    logger.info(f"  Completed: {completed_runs}")
-    logger.info(f"  Failed: {failed_runs}")
+    logger.info(f"  Total Models: {total_models}")
+    logger.info(f"  Models with Signals: {models_with_signals}")
     logger.info(f"  Success Rate: {success_rate:.1f}%")
     logger.info(f"  Total Signals: {total_signals}")
-    logger.info(f"  Avg Execution Time: {avg_execution_time:.1f}s")
     
     if alerts:
         logger.warning(f"Alerts: {'; '.join(alerts)}")
     
     return {
         'execution_date': execution_date,
-        'total_runs': total_runs,
-        'completed_runs': completed_runs,
-        'failed_runs': failed_runs,
+        'total_models': total_models,
+        'models_with_signals': models_with_signals,
         'success_rate': success_rate,
         'total_signals': total_signals,
-        'avg_execution_time': avg_execution_time,
         'alerts': alerts,
         'model_results': model_results_df.to_dict('records') if not model_results_df.empty else []
     }
