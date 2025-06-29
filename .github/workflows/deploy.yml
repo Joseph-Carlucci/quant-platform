@@ -45,7 +45,9 @@ jobs:
         # Apply environment configuration
         kubectl apply -f k8s/secrets.yaml
         
-        # Create secrets from GitHub repository secrets (not from the template file)
+        # Delete and recreate secrets to ensure GitHub secrets are used
+        kubectl delete secret quant-secrets --namespace=${{ env.NAMESPACE }} --ignore-not-found=true
+        
         kubectl create secret generic quant-secrets \
           --from-literal=postgres-password="${{ secrets.POSTGRES_PASSWORD }}" \
           --from-literal=pgadmin-password="${{ secrets.PGADMIN_PASSWORD }}" \
@@ -54,8 +56,7 @@ jobs:
           --from-literal=airflow-admin-username="${{ secrets.AIRFLOW_ADMIN_USERNAME }}" \
           --from-literal=airflow-admin-password="${{ secrets.AIRFLOW_ADMIN_PASSWORD }}" \
           --from-literal=airflow-admin-email="${{ secrets.AIRFLOW_ADMIN_EMAIL }}" \
-          --namespace=${{ env.NAMESPACE }} \
-          --dry-run=client -o yaml | kubectl apply -f -
+          --namespace=${{ env.NAMESPACE }}
         
         # Update DAGs ConfigMap
         kubectl create configmap airflow-dags \
