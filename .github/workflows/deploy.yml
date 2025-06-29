@@ -42,12 +42,10 @@ jobs:
         
     - name: Deploy ConfigMaps and Secrets
       run: |
-        # Apply environment configuration
-        kubectl apply -f k8s/secrets.yaml
-        
-        # Delete and recreate secrets to ensure GitHub secrets are used
+        # Delete old secret first to avoid conflicts
         kubectl delete secret quant-secrets --namespace=${{ env.NAMESPACE }} --ignore-not-found=true
         
+        # Create secrets from GitHub repository secrets
         kubectl create secret generic quant-secrets \
           --from-literal=postgres-password="${{ secrets.POSTGRES_PASSWORD }}" \
           --from-literal=pgadmin-password="${{ secrets.PGADMIN_PASSWORD }}" \
@@ -57,6 +55,20 @@ jobs:
           --from-literal=airflow-admin-password="${{ secrets.AIRFLOW_ADMIN_PASSWORD }}" \
           --from-literal=airflow-admin-email="${{ secrets.AIRFLOW_ADMIN_EMAIL }}" \
           --namespace=${{ env.NAMESPACE }}
+        
+        # Apply ConfigMap configuration (not the template secrets)
+        kubectl create configmap quant-config \
+          --from-literal=POSTGRES_USER="quant_user" \
+          --from-literal=POSTGRES_DB="quant_data" \
+          --from-literal=AIRFLOW__CORE__EXECUTOR="LocalExecutor" \
+          --from-literal=AIRFLOW__CORE__LOAD_EXAMPLES="false" \
+          --from-literal=AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION="false" \
+          --from-literal=AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL="30" \
+          --from-literal=AIRFLOW__WEBSERVER__EXPOSE_CONFIG="true" \
+          --from-literal=AIRFLOW__WEBSERVER__WARN_DEPLOYMENT_EXPOSURE="false" \
+          --from-literal=AIRFLOW__WEBSERVER__SECRET_KEY="quant_platform_secret_key_2024" \
+          --namespace=${{ env.NAMESPACE }} \
+          --dry-run=client -o yaml | kubectl apply -f -
         
         # Update DAGs ConfigMap
         kubectl create configmap airflow-dags \
