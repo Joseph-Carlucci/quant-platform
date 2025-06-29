@@ -48,8 +48,9 @@ spec:
         volumeMounts:
         - name: postgres-data
           mountPath: /var/lib/postgresql/data
-        - name: init-scripts
-          mountPath: /docker-entrypoint-initdb.d
+        - name: init-script
+          mountPath: /docker-entrypoint-initdb.d/init-db.sql
+          subPath: init-db.sql
         livenessProbe:
           exec:
             command:
@@ -77,9 +78,9 @@ spec:
       - name: postgres-data
         persistentVolumeClaim:
           claimName: postgres-pvc
-      - name: init-scripts
+      - name: init-script
         configMap:
-          name: db-init-scripts
+          name: db-init-script
 ---
 apiVersion: v1
 kind: Service

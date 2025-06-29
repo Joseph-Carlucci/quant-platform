@@ -76,9 +76,9 @@ jobs:
           --namespace=${{ env.NAMESPACE }} \
           --dry-run=client -o yaml | kubectl apply -f -
           
-        # Update DB init scripts
-        kubectl create configmap db-init-scripts \
-          --from-file=init.sql \
+        # Update DB init script
+        kubectl create configmap db-init-script \
+          --from-file=init-db.sql \
           --namespace=${{ env.NAMESPACE }} \
           --dry-run=client -o yaml | kubectl apply -f -
           
