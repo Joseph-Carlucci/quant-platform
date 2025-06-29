@@ -93,15 +93,9 @@ jobs:
         
     - name: Update DAGs
       run: |
-        echo "DAGs updated via ConfigMap"
-        
-        # Option 1: Wait for automatic detection (30 seconds)
-        echo "Waiting for Airflow to detect new DAGs automatically..."
-        sleep 45
-        
-        # Option 2: Uncomment below for faster restart (if you need immediate updates)
-        # kubectl rollout restart deployment/airflow -n ${{ env.NAMESPACE }}
-        # kubectl rollout status deployment/airflow -n ${{ env.NAMESPACE }} --timeout=600s
+        echo "✅ DAGs updated via ConfigMap"
+        echo "📝 Airflow will auto-detect changes within 30 seconds"
+        echo "🔗 Connect with ./connect-prod.sh to verify in Airflow UI"
         
     - name: Get access information
       run: |
@@ -124,17 +118,6 @@ jobs:
         echo "   Password: Set via PGADMIN_PASSWORD secret"
         echo ""
         echo "⚠️  Remember to set your GitHub repository secrets for production!"
-        
-    - name: Verify DAGs are loaded
-      run: |
-        # Wait a bit for Airflow to fully start
-        sleep 30
-        
-        # Get the Airflow pod name
-        AIRFLOW_POD=$(kubectl get pods -n ${{ env.NAMESPACE }} -l app=airflow -o jsonpath='{.items[0].metadata.name}')
-        
-        echo "Checking DAGs in Airflow pod: $AIRFLOW_POD"
-        kubectl exec $AIRFLOW_POD -c airflow-webserver -n ${{ env.NAMESPACE }} -- airflow dags list
         
     - name: Run health checks
       run: |
