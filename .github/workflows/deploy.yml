@@ -111,15 +111,25 @@ jobs:
         echo "🔗 Connect with ./connect-prod.sh to verify in Airflow UI"
         echo "🔧 Secrets updated for proper authentication"
         
-    - name: Restart Airflow to pick up latest changes
+    - name: Update Airflow user and restart
       run: |
-        echo "🔄 Restarting Airflow to pick up new DAGs and secrets..."
+        echo "🔄 Creating new Airflow admin user and restarting..."
+        
+        # Create new Airflow admin user
+        kubectl exec -n ${{ env.NAMESPACE }} deployment/airflow -c airflow-webserver -- \
+          airflow users create \
+            --username "${{ secrets.AIRFLOW_ADMIN_USERNAME }}" \
+            --firstname Admin \
+            --lastname User \
+            --role Admin \
+            --email "${{ secrets.AIRFLOW_ADMIN_EMAIL }}" \
+            --password "${{ secrets.AIRFLOW_ADMIN_PASSWORD }}" || echo "User may already exist, continuing..."
         
         # Restart Airflow deployment (picks up new secrets, DAGs, etc.)
         kubectl rollout restart deployment/airflow -n ${{ env.NAMESPACE }}
         kubectl rollout status deployment/airflow -n ${{ env.NAMESPACE }} --timeout=600s
         
-        echo "✅ Airflow restarted with latest configuration"
+        echo "✅ Airflow user updated and restarted with latest configuration"
         
     - name: Get access information
       run: |
