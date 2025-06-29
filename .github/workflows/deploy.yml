@@ -91,10 +91,17 @@ jobs:
         echo "Waiting for pgAdmin to be ready..."
         kubectl wait --for=condition=available --timeout=300s deployment/pgadmin -n ${{ env.NAMESPACE }}
         
-    - name: Restart Airflow to pick up new DAGs
+    - name: Update DAGs
       run: |
-        kubectl rollout restart deployment/airflow -n ${{ env.NAMESPACE }}
-        kubectl rollout status deployment/airflow -n ${{ env.NAMESPACE }} --timeout=600s
+        echo "DAGs updated via ConfigMap"
+        
+        # Option 1: Wait for automatic detection (30 seconds)
+        echo "Waiting for Airflow to detect new DAGs automatically..."
+        sleep 45
+        
+        # Option 2: Uncomment below for faster restart (if you need immediate updates)
+        # kubectl rollout restart deployment/airflow -n ${{ env.NAMESPACE }}
+        # kubectl rollout status deployment/airflow -n ${{ env.NAMESPACE }} --timeout=600s
         
     - name: Get access information
       run: |
