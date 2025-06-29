@@ -43,13 +43,17 @@ jobs:
     - name: Deploy ConfigMaps and Secrets
       run: |
         # Apply environment configuration
-        kubectl apply -f k8s/config.yaml
+        kubectl apply -f k8s/secrets.yaml
         
         # Create secrets from GitHub repository secrets (not from the template file)
         kubectl create secret generic quant-secrets \
           --from-literal=postgres-password="${{ secrets.POSTGRES_PASSWORD }}" \
           --from-literal=pgadmin-password="${{ secrets.PGADMIN_PASSWORD }}" \
+          --from-literal=pgadmin-email="${{ secrets.PGADMIN_EMAIL }}" \
           --from-literal=polygon-api-key="${{ secrets.POLYGON_API_KEY }}" \
+          --from-literal=airflow-admin-username="${{ secrets.AIRFLOW_ADMIN_USERNAME }}" \
+          --from-literal=airflow-admin-password="${{ secrets.AIRFLOW_ADMIN_PASSWORD }}" \
+          --from-literal=airflow-admin-email="${{ secrets.AIRFLOW_ADMIN_EMAIL }}" \
           --namespace=${{ env.NAMESPACE }} \
           --dry-run=client -o yaml | kubectl apply -f -
         
@@ -92,28 +96,27 @@ jobs:
         kubectl rollout restart deployment/airflow -n ${{ env.NAMESPACE }}
         kubectl rollout status deployment/airflow -n ${{ env.NAMESPACE }} --timeout=600s
         
-    - name: Get service URLs
+    - name: Get access information
       run: |
         echo "=== Deployment Complete ==="
-        echo "Getting service URLs..."
-        
-        AIRFLOW_URL=$(kubectl get service airflow -n ${{ env.NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-        PGADMIN_URL=$(kubectl get service pgadmin -n ${{ env.NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-        
-        # Get the actual service ports
-        AIRFLOW_PORT=$(kubectl get service airflow -n ${{ env.NAMESPACE }} -o jsonpath='{.spec.ports[0].port}')
-        PGADMIN_PORT=$(kubectl get service pgadmin -n ${{ env.NAMESPACE }} -o jsonpath='{.spec.ports[0].port}')
-        
-        echo "🚀 Airflow: http://${AIRFLOW_URL}:${AIRFLOW_PORT}"
-        echo "🔧 pgAdmin: http://${PGADMIN_URL}:${PGADMIN_PORT}"
+        echo "🎉 Your Quantitative Research Platform is LIVE!"
         echo ""
-        echo "Login credentials:"
-        echo "Airflow - admin/admin"
-        echo "pgAdmin - admin@admin.com/admin"
-        
-        # Save URLs to GitHub environment for potential use in other jobs
-        echo "AIRFLOW_URL=http://${AIRFLOW_URL}:${AIRFLOW_PORT}" >> $GITHUB_ENV
-        echo "PGADMIN_URL=http://${PGADMIN_URL}:${PGADMIN_PORT}" >> $GITHUB_ENV
+        echo "🔒 Security Notice: This deployment uses ClusterIP services for security."
+        echo "   Access services via port-forwarding for secure connections."
+        echo ""
+        echo "📊 Airflow UI Access:"
+        echo "   kubectl port-forward -n ${{ env.NAMESPACE }} service/airflow 8080:8080"
+        echo "   Then visit: http://localhost:8080"
+        echo "   Username: Set via AIRFLOW_ADMIN_USERNAME secret"
+        echo "   Password: Set via AIRFLOW_ADMIN_PASSWORD secret"
+        echo ""
+        echo "🐘 pgAdmin Access:"
+        echo "   kubectl port-forward -n ${{ env.NAMESPACE }} service/pgadmin 5050:80"
+        echo "   Then visit: http://localhost:5050"
+        echo "   Email: Set via PGADMIN_EMAIL environment or default"
+        echo "   Password: Set via PGADMIN_PASSWORD secret"
+        echo ""
+        echo "⚠️  Remember to set your GitHub repository secrets for production!"
         
     - name: Verify DAGs are loaded
       run: |

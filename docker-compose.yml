@@ -29,7 +29,7 @@ services:
     container_name: quant-postgres
     environment:
       POSTGRES_USER: postgres          # Superuser for database administration
-      POSTGRES_PASSWORD: postgres      # Change in production!
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}  # Set via .env file or environment
       POSTGRES_DB: postgres           # Default database
     volumes:
       # Persistent storage for database data
@@ -121,7 +121,7 @@ services:
     command: >
       bash -c "
         airflow db init &&
-        airflow users create --username \${AIRFLOW_ADMIN_USERNAME:-quant_admin} --firstname Admin --lastname User --role Admin --email \${AIRFLOW_ADMIN_EMAIL:-admin@quantplatform.local} --password \${AIRFLOW_ADMIN_PASSWORD:-secure_quant_password_2024} &&
+        airflow users create --username \${AIRFLOW_ADMIN_USERNAME:-admin} --firstname Admin --lastname User --role Admin --email \${AIRFLOW_ADMIN_EMAIL:-admin@localhost} --password \${AIRFLOW_ADMIN_PASSWORD:-admin} &&
         rm -f /opt/airflow/airflow-webserver.pid &&
         airflow webserver --port 8080 --host 0.0.0.0 & airflow scheduler
       "
@@ -142,8 +142,8 @@ services:
     image: dpage/pgadmin4:latest
     container_name: quant-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@quantplatform.local}    # Login email
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-secure_pgadmin_password_2024}   # Login password
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@localhost}    # Login email
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}   # Login password
     ports:
       - "5050:80"                              # Web interface
     depends_on:

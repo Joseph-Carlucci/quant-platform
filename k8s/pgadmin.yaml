@@ -22,7 +22,10 @@ spec:
         - containerPort: 80
         env:
         - name: PGADMIN_DEFAULT_EMAIL
-          value: "admin@admin.com"
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: pgadmin-email
         - name: PGADMIN_DEFAULT_PASSWORD
           valueFrom:
             secretKeyRef:
@@ -50,4 +53,4 @@ spec:
     name: http
   selector:
     app: pgadmin
-  type: LoadBalancer  # Creates AWS ELB for external access 
+  type: ClusterIP  # Internal access only - use port-forward for external access 
