@@ -31,6 +31,14 @@ spec:
             secretKeyRef:
               name: quant-secrets
               key: pgadmin-password
+        - name: PGADMIN_CONFIG_WTF_CSRF_TIME_LIMIT
+          value: "3600"
+        - name: PGADMIN_CONFIG_WTF_CSRF_ENABLED
+          value: "True"
+        - name: PGADMIN_CONFIG_SESSION_COOKIE_SECURE
+          value: "False"
+        - name: PGADMIN_CONFIG_SESSION_COOKIE_HTTPONLY
+          value: "True"
         resources:
           requests:
             memory: "256Mi"
