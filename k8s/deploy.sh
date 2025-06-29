@@ -51,8 +51,8 @@ echo "⚠️  IMPORTANT: Secrets must be created manually or via CI/CD"
 echo "   This script does not create secrets - use GitHub Actions for production"
 
 # Step 4: Create configmaps from local files
-echo "📋 Creating database init scripts..."
-kubectl create configmap db-init-scripts --from-file=db-init/ -n quant-platform --dry-run=client -o yaml | kubectl apply -f -
+echo "📋 Creating database init script..."
+kubectl create configmap db-init-script --from-file=init-db.sql -n quant-platform --dry-run=client -o yaml | kubectl apply -f -
 
 echo "📊 Creating Airflow DAGs..."
 kubectl create configmap airflow-dags --from-file=dags/ -n quant-platform --dry-run=client -o yaml | kubectl apply -f -
