@@ -29,8 +29,8 @@ docker-compose ps
 ```
 
 ### 3. Access Web Interfaces
-- **Airflow**: http://localhost:8080 (admin/admin)
-- **pgAdmin**: http://localhost:5050 (admin@admin.com/admin)
+- **Airflow**: http://localhost:8080 (see credentials in .env file)
+- **pgAdmin**: http://localhost:5050 (see credentials in .env file)
 
 ## 🔄 Run the End-to-End Example
 
@@ -133,16 +133,9 @@ Edit `dags/end_to_end_model_execution.py`:
 
 ### Default Credentials (IMPORTANT!)
 
-For security, the platform uses secure default credentials instead of `admin/admin`. The defaults are:
+**SECURITY WARNING**: Never commit credentials to version control!
 
-**Airflow Web UI:**
-- Username: `quant_admin`
-- Password: `secure_quant_password_2024`
-- Email: `admin@quantplatform.local`
-
-**pgAdmin:**
-- Email: `admin@quantplatform.local`
-- Password: `secure_pgadmin_password_2024`
+For local development, the platform uses basic defaults. For production deployments, you MUST set secure credentials via environment variables.
 
 ### Override Credentials
 

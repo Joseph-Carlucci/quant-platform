@@ -49,6 +49,7 @@ jobs:
         kubectl create secret generic quant-secrets \
           --from-literal=postgres-password="${{ secrets.POSTGRES_PASSWORD }}" \
           --from-literal=pgadmin-password="${{ secrets.PGADMIN_PASSWORD }}" \
+          --from-literal=pgadmin-email="${{ secrets.PGADMIN_EMAIL }}" \
           --from-literal=polygon-api-key="${{ secrets.POLYGON_API_KEY }}" \
           --from-literal=airflow-admin-username="${{ secrets.AIRFLOW_ADMIN_USERNAME }}" \
           --from-literal=airflow-admin-password="${{ secrets.AIRFLOW_ADMIN_PASSWORD }}" \
