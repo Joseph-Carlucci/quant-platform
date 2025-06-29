@@ -45,10 +45,10 @@ echo ""
 echo "🏗️  Creating namespace..."
 kubectl apply -f k8s/namespace.yaml
 
-# Step 3: Apply secrets and config
-echo "🔐 Setting up secrets and configuration..."
-kubectl apply -f k8s/secrets.yaml
-kubectl apply -f k8s/config.yaml 2>/dev/null || echo "ℹ️  No separate config.yaml found (using secrets.yaml)"
+# Step 3: Apply configuration
+echo "🔐 Setting up configuration..."
+echo "⚠️  IMPORTANT: Secrets must be created manually or via CI/CD"
+echo "   This script does not create secrets - use GitHub Actions for production"
 
 # Step 4: Create configmaps from local files
 echo "📋 Creating database init scripts..."

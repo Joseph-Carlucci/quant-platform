@@ -171,6 +171,10 @@ After setting up secrets:
 3. **Access your platform** securely via port-forwarding
 4. **Add more secrets** as needed for additional integrations
 
+## 🗑️ Note: No Template Files
+
+This platform no longer uses template secret files that could accidentally expose credentials. All secrets are created directly from your GitHub repository secrets during CI/CD deployment.
+
 ---
 
 **✨ Your quantitative research platform is now securely configured for production deployment!**
