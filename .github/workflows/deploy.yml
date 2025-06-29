@@ -90,12 +90,8 @@ jobs:
         kubectl apply -f k8s/postgres.yaml
         kubectl apply -f k8s/redis.yaml
         
-        # Deploy Airflow components
         echo "🌊 Deploying Airflow..."
-        kubectl apply -f k8s/airflow-storage.yaml
-        kubectl apply -f k8s/airflow-rbac.yaml
-        kubectl apply -f k8s/airflow-scheduler.yaml
-        kubectl apply -f k8s/airflow-webserver.yaml
+        kubectl apply -f k8s/airflow.yaml
         
     - name: Wait for deployments to be ready
       run: |
@@ -106,8 +102,7 @@ jobs:
         kubectl wait --for=condition=available --timeout=300s deployment/redis -n ${{ env.NAMESPACE }}
         
         echo "Waiting for Airflow to be ready..."
-        kubectl wait --for=condition=available --timeout=600s deployment/airflow-scheduler -n ${{ env.NAMESPACE }}
-        kubectl wait --for=condition=available --timeout=600s deployment/airflow-webserver -n ${{ env.NAMESPACE }}
+        kubectl wait --for=condition=available --timeout=600s deployment/airflow -n ${{ env.NAMESPACE }}
         
     - name: Update DAGs
       run: |
@@ -121,20 +116,17 @@ jobs:
         echo "🔄 Updating Airflow admin user with latest credentials..."
         
         # Wait for Airflow to be ready
-        kubectl wait --for=condition=available --timeout=600s deployment/airflow-scheduler -n ${{ env.NAMESPACE }}
-        kubectl wait --for=condition=available --timeout=600s deployment/airflow-webserver -n ${{ env.NAMESPACE }}
+        kubectl wait --for=condition=available --timeout=600s deployment/airflow -n ${{ env.NAMESPACE }}
         
-        # Get the Airflow scheduler pod name (has airflow CLI)
-        AIRFLOW_POD=$(kubectl get pods -n ${{ env.NAMESPACE }} -l component=scheduler -o jsonpath='{.items[0].metadata.name}')
+        # Get the Airflow pod name
+        AIRFLOW_POD=$(kubectl get pods -n ${{ env.NAMESPACE }} -l app=airflow -o jsonpath='{.items[0].metadata.name}')
         
         # Delete existing admin user if it exists
-        kubectl exec $AIRFLOW_POD -n ${{ env.NAMESPACE }} -- airflow users delete --username admin || echo "No existing admin user to delete"
+        kubectl exec $AIRFLOW_POD -c airflow-scheduler -n ${{ env.NAMESPACE }} -- airflow users delete --username admin || echo "No existing admin user to delete"
         
         # Restart Airflow to recreate admin user with new credentials
-        kubectl rollout restart deployment/airflow-scheduler -n ${{ env.NAMESPACE }}
-        kubectl rollout restart deployment/airflow-webserver -n ${{ env.NAMESPACE }}
-        kubectl rollout status deployment/airflow-scheduler -n ${{ env.NAMESPACE }} --timeout=600s
-        kubectl rollout status deployment/airflow-webserver -n ${{ env.NAMESPACE }} --timeout=600s
+        kubectl rollout restart deployment/airflow -n ${{ env.NAMESPACE }}
+        kubectl rollout status deployment/airflow -n ${{ env.NAMESPACE }} --timeout=600s
         
     - name: Get access information
       run: |
@@ -145,7 +137,7 @@ jobs:
         echo "   Access services via port-forwarding for secure connections."
         echo ""
         echo "📊 Airflow UI Access:"
-        echo "   kubectl port-forward -n ${{ env.NAMESPACE }} service/airflow-webserver 8080:8080"
+        echo "   kubectl port-forward -n ${{ env.NAMESPACE }} service/airflow 8080:8080"
         echo "   Then visit: http://localhost:8080"
         echo "   Username: Set via AIRFLOW_ADMIN_USERNAME secret"
         echo "   Password: Set via AIRFLOW_ADMIN_PASSWORD secret"
