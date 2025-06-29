@@ -258,11 +258,10 @@ def calculate_technical_features(**context) -> Dict[str, Any]:
         with engine.begin() as conn:
             for feature in all_features:
                 conn.execute(
-                    text("INSERT INTO feature_store (symbol, date, feature_set, features) VALUES (:symbol, :date, :feature_set, :features) ON CONFLICT (symbol, date, feature_set) DO UPDATE SET features = EXCLUDED.features, updated_at = CURRENT_TIMESTAMP"),
+                    text("INSERT INTO technical_features (symbol, date, features) VALUES (:symbol, :date, :features) ON CONFLICT (symbol, date) DO UPDATE SET features = EXCLUDED.features, created_at = CURRENT_TIMESTAMP"),
                     {
                         'symbol': feature['symbol'], 
                         'date': feature['date'], 
-                        'feature_set': feature['feature_set'], 
                         'features': json.dumps(feature['features'])
                     }
                 )
@@ -305,10 +304,9 @@ def update_trading_universe(**context) -> Dict[str, Any]:
     with engine.begin() as conn:
         for u in universe_data:
             conn.execute(
-                text("INSERT INTO trading_universe (symbol, company_name, sector, is_active) VALUES (:symbol, :company_name, :sector, :is_active) ON CONFLICT (symbol) DO UPDATE SET company_name = EXCLUDED.company_name, sector = EXCLUDED.sector, is_active = EXCLUDED.is_active, last_updated = CURRENT_TIMESTAMP"),
+                text("INSERT INTO trading_universe (symbol, sector, is_active) VALUES (:symbol, :sector, :is_active) ON CONFLICT (symbol) DO UPDATE SET sector = EXCLUDED.sector, is_active = EXCLUDED.is_active, last_updated = CURRENT_TIMESTAMP"),
                 {
                     'symbol': u['symbol'], 
-                    'company_name': u['company_name'], 
                     'sector': u['sector'], 
                     'is_active': True
                 }
@@ -357,8 +355,8 @@ def validate_data_quality(**context) -> Dict[str, Any]:
     # Check 2: Features completeness
     features_count_sql = """
     SELECT COUNT(DISTINCT symbol) as count 
-    FROM feature_store 
-    WHERE date = %(execution_date)s AND feature_set = 'technical_v1'
+    FROM technical_features 
+    WHERE date = %(execution_date)s
     """
     with engine.connect() as conn:
         result = pd.read_sql(features_count_sql, conn, params={'execution_date': execution_date})
