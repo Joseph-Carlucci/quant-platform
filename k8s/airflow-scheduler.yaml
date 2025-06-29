@@ -1,0 +1,136 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-scheduler
+  namespace: quant-platform
+  labels:
+    app: airflow
+    component: scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow
+      component: scheduler
+  template:
+    metadata:
+      labels:
+        app: airflow
+        component: scheduler
+    spec:
+      serviceAccountName: airflow
+      initContainers:
+      - name: wait-for-db
+        image: postgres:15
+        command:
+        - /bin/bash
+        - -c
+        - |
+          until PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U postgres -d airflow -c "SELECT 1;" > /dev/null 2>&1; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: postgres-password
+      - name: airflow-init
+        image: quant-platform/airflow:latest
+        command:
+        - /bin/bash
+        - -c
+        - |
+          airflow db init
+          airflow users create \
+            --username "$AIRFLOW_ADMIN_USERNAME" \
+            --firstname "Admin" \
+            --lastname "User" \
+            --role "Admin" \
+            --email "$AIRFLOW_ADMIN_EMAIL" \
+            --password "$AIRFLOW_ADMIN_PASSWORD" || true
+        env:
+        - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: airflow-db-connection
+        - name: AIRFLOW__CORE__FERNET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: airflow-fernet-key
+        - name: AIRFLOW_ADMIN_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: airflow-admin-username
+        - name: AIRFLOW_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: airflow-admin-password
+        - name: AIRFLOW_ADMIN_EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: airflow-admin-email
+        envFrom:
+        - configMapRef:
+            name: airflow-config
+        volumeMounts:
+        - name: dags
+          mountPath: /opt/airflow/dags
+      containers:
+      - name: scheduler
+        image: quant-platform/airflow:latest
+        command: ["airflow", "scheduler"]
+        env:
+        - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: airflow-db-connection
+        - name: AIRFLOW__CORE__FERNET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: airflow-fernet-key
+        - name: POLYGON_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: polygon-api-key
+        envFrom:
+        - configMapRef:
+            name: airflow-config
+        volumeMounts:
+        - name: dags
+          mountPath: /opt/airflow/dags
+        - name: logs
+          mountPath: /opt/airflow/logs
+        livenessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -c
+            - "airflow jobs check --job-type SchedulerJob --hostname $(hostname)"
+          initialDelaySeconds: 120
+          periodSeconds: 60
+          timeoutSeconds: 10
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: dags
+        configMap:
+          name: airflow-dags
+      - name: logs
+        persistentVolumeClaim:
+          claimName: airflow-logs-pvc

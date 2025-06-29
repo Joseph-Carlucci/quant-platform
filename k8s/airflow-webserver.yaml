@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-webserver
+  namespace: quant-platform
+  labels:
+    app: airflow
+    component: webserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow
+      component: webserver
+  template:
+    metadata:
+      labels:
+        app: airflow
+        component: webserver
+    spec:
+      serviceAccountName: airflow
+      initContainers:
+      - name: wait-for-db
+        image: postgres:15
+        command:
+        - /bin/bash
+        - -c
+        - |
+          until PGPASSWORD=$POSTGRES_PASSWORD psql -h postgres -U postgres -d airflow -c "SELECT 1;" > /dev/null 2>&1; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: postgres-password
+      containers:
+      - name: webserver
+        image: quant-platform/airflow:latest
+        ports:
+        - containerPort: 8080
+        command: ["airflow", "webserver"]
+        env:
+        - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: airflow-db-connection
+        - name: AIRFLOW__CORE__FERNET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: airflow-fernet-key
+        - name: POLYGON_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: polygon-api-key
+        envFrom:
+        - configMapRef:
+            name: airflow-config
+        volumeMounts:
+        - name: dags
+          mountPath: /opt/airflow/dags
+        - name: logs
+          mountPath: /opt/airflow/logs
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 120
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: dags
+        configMap:
+          name: airflow-dags
+      - name: logs
+        persistentVolumeClaim:
+          claimName: airflow-logs-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: airflow-webserver
+  namespace: quant-platform
+  labels:
+    app: airflow
+    component: webserver
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http
+  selector:
+    app: airflow
+    component: webserver

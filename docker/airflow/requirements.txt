@@ -1,0 +1,13 @@
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+
+# API integrations
+requests>=2.31.0
+yfinance>=0.2.0
+
+# Additional Airflow providers if needed
+# apache-airflow-providers-postgres>=5.6.0
+# apache-airflow-providers-http>=4.5.0
