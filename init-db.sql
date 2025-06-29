@@ -1,6 +1,9 @@
 -- Quantitative Research Platform Database Initialization
 -- This script sets up all required databases and schemas
 
+-- Set postgres superuser password from environment variable
+-- Note: This will be executed via psql with environment variable substitution
+
 -- Create databases if they don't exist
 SELECT 'CREATE DATABASE airflow' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'airflow');
 SELECT 'CREATE DATABASE quant_data' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'quant_data');
