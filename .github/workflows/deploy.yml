@@ -40,12 +40,9 @@ jobs:
         kubectl get nodes
         kubectl get namespaces
         
-    - name: Deploy ConfigMaps and Secrets
+    - name: Create Secrets from GitHub
       run: |
-        # Delete old secret first to avoid conflicts
-        kubectl delete secret quant-secrets --namespace=${{ env.NAMESPACE }} --ignore-not-found=true
-        
-        # Create secrets from GitHub repository secrets
+        # Create production secrets directly from GitHub repository secrets
         kubectl create secret generic quant-secrets \
           --from-literal=postgres-password="${{ secrets.POSTGRES_PASSWORD }}" \
           --from-literal=pgadmin-password="${{ secrets.PGADMIN_PASSWORD }}" \
@@ -54,9 +51,12 @@ jobs:
           --from-literal=airflow-admin-username="${{ secrets.AIRFLOW_ADMIN_USERNAME }}" \
           --from-literal=airflow-admin-password="${{ secrets.AIRFLOW_ADMIN_PASSWORD }}" \
           --from-literal=airflow-admin-email="${{ secrets.AIRFLOW_ADMIN_EMAIL }}" \
-          --namespace=${{ env.NAMESPACE }}
-        
-        # Apply ConfigMap configuration (not the template secrets)
+          --namespace=${{ env.NAMESPACE }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+    
+    - name: Create ConfigMaps
+      run: |
+        # Create Airflow configuration
         kubectl create configmap quant-config \
           --from-literal=POSTGRES_USER="quant_user" \
           --from-literal=POSTGRES_DB="quant_data" \
