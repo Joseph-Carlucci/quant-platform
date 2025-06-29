@@ -111,6 +111,12 @@ jobs:
         echo "🔗 Connect with ./connect-prod.sh to verify in Airflow UI"
         echo "🔧 Secrets updated for proper authentication"
         
+    - name: Restart Airflow for secret updates
+      run: |
+        echo "🔄 Restarting Airflow to pick up new admin credentials..."
+        kubectl rollout restart deployment/airflow -n ${{ env.NAMESPACE }}
+        kubectl rollout status deployment/airflow -n ${{ env.NAMESPACE }} --timeout=600s
+        
     - name: Get access information
       run: |
         echo "=== Deployment Complete ==="
