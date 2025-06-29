@@ -6,16 +6,21 @@ This guide explains how to securely access your production quantitative research
 
 ## 🚀 Quick Start
 
-### Use the Connection Script (Recommended)
+### Use the Development Script (Recommended)
 ```bash
-./scripts/connect.sh
+# Start everything (returns terminal immediately)
+./start-dev.sh
+
+# When done, stop production port-forwards
+./stop-dev.sh
 ```
 
-This interactive script will:
-- Check service status
-- Set up port-forwarding on non-conflicting ports
-- Provide connection instructions
-- Manage multiple connections
+The start script will:
+- Start local Docker development environment
+- Set up production port-forwarding in background
+- Handle both environments simultaneously
+- Return your terminal immediately
+- Provide access information for everything
 
 ### Manual Port-Forwarding
 ```bash

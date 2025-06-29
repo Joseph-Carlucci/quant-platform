@@ -19,18 +19,31 @@ cp env.example .env
 # Edit .env and add: POLYGON_API_KEY=your_actual_api_key_here
 ```
 
-### 2. Launch Services
+### 2. Launch Local Services
 ```bash
-# Start all services
-docker-compose up -d
+# Start local development environment
+docker compose up -d
 
 # Verify services are running
-docker-compose ps
+docker compose ps
 ```
 
-### 3. Access Web Interfaces
-- **Airflow**: http://localhost:8080 (see credentials in .env file)
-- **pgAdmin**: http://localhost:5050 (see credentials in .env file)
+### 3. Access Local Web Interfaces
+- **Airflow**: http://localhost:8080 (credentials from .env file)
+- **pgAdmin**: http://localhost:5050 (credentials from .env file)
+
+### 4. Connect to Production (Optional)
+```bash
+# Connect to production services
+./connect-prod.sh
+
+# When done, disconnect
+./disconnect-prod.sh
+```
+
+**Production Access:**
+- **Airflow**: http://localhost:8081 (credentials from GitHub secrets)
+- **pgAdmin**: http://localhost:5051 (credentials from GitHub secrets)
 
 ## 🔄 Run the End-to-End Example
 
@@ -209,11 +222,23 @@ Review `models/strategies/momentum/enhanced_momentum.py` to understand:
 - Set up CI/CD with `.github/workflows/`
 - Configure monitoring and alerting
 
+## 🛑 Stopping Services
+
+```bash
+# Stop local development
+docker compose down
+
+# Stop production connections
+./disconnect-prod.sh
+```
+
 ## 📚 Documentation
 
+- **[Development Workflow](DEV_WORKFLOW.md)**: Complete development guide
+- **[Production Access](PRODUCTION_ACCESS.md)**: Secure production access
 - **[Architecture Guide](ARCHITECTURE.md)**: Detailed system design
 - **[End-to-End Example](END_TO_END_EXAMPLE.md)**: Complete workflow explanation
-- **[CI/CD Setup](CICD_SETUP.md)**: Deployment automation
+- **[GitHub Secrets Setup](GITHUB_SECRETS_SETUP.md)**: CI/CD security configuration
 
 ---
 
