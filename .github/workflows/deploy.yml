@@ -109,6 +109,7 @@ jobs:
         echo "✅ DAGs updated via ConfigMap"
         echo "📝 Airflow will auto-detect changes within 30 seconds"
         echo "🔗 Connect with ./connect-prod.sh to verify in Airflow UI"
+        echo "🔧 Secrets updated for proper authentication"
         
     - name: Get access information
       run: |
