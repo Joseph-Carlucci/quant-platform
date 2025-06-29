@@ -27,7 +27,10 @@ spec:
           airflow users create --username "$AIRFLOW_ADMIN_USERNAME" --firstname Admin --lastname User --role Admin --email "$AIRFLOW_ADMIN_EMAIL" --password "$AIRFLOW_ADMIN_PASSWORD" || true
         env:
         - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
-          value: "postgresql+psycopg2://postgres:quant_password@postgres:5432/airflow"
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: airflow-db-connection
         - name: POLYGON_API_KEY
           valueFrom:
             secretKeyRef:
@@ -67,7 +70,10 @@ spec:
           airflow webserver
         env:
         - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
-          value: "postgresql+psycopg2://postgres:quant_password@postgres:5432/airflow"
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: airflow-db-connection
         - name: POLYGON_API_KEY
           valueFrom:
             secretKeyRef:
@@ -110,7 +116,10 @@ spec:
           airflow scheduler
         env:
         - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
-          value: "postgresql+psycopg2://postgres:quant_password@postgres:5432/airflow"
+          valueFrom:
+            secretKeyRef:
+              name: quant-secrets
+              key: airflow-db-connection
         - name: POLYGON_API_KEY
           valueFrom:
             secretKeyRef:
