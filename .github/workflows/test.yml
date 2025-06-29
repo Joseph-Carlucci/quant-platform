@@ -37,10 +37,7 @@ jobs:
         required_files=(
           "k8s/postgres.yaml"
           "k8s/redis.yaml" 
-          "k8s/airflow-storage.yaml"
-          "k8s/airflow-rbac.yaml"
-          "k8s/airflow-scheduler.yaml"
-          "k8s/airflow-webserver.yaml"
+          "k8s/airflow.yaml"
           "init-db.sql"
         )
         
