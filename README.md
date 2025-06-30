@@ -56,8 +56,8 @@ The platform follows a clean layered architecture:
 git clone <your-repo-url>
 cd quant-platform
 
-# Create environment file
-cp env.example .env
+# Run setup script (creates directories, permissions, .env file)
+./setup-dev.sh
 
 # Edit .env with your API key
 nano .env  # Add: POLYGON_API_KEY=your_actual_api_key_here
@@ -67,6 +67,9 @@ nano .env  # Add: POLYGON_API_KEY=your_actual_api_key_here
 ```bash
 # Start all services
 docker-compose up -d
+
+# Monitor startup progress
+docker-compose logs -f airflow
 
 # Check services are running
 docker-compose ps
