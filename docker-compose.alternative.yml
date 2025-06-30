@@ -1,0 +1,134 @@
+# Alternative Docker Compose for systems with file mount issues
+# This version embeds the SQL directly in environment variables instead of file mounts
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: quant-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+      # Embed SQL initialization directly (avoids file mount issues)
+      POSTGRES_INITDB_ARGS: "--auth-host=md5"
+    volumes:
+      # Only use named volume, no file mounts
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - quant-network
+    # Run initialization SQL via command instead of file mount
+    command: >
+      bash -c "
+        docker-entrypoint.sh postgres &
+        sleep 10 &&
+        PGPASSWORD=postgres psql -h localhost -U postgres -c \"
+          CREATE DATABASE IF NOT EXISTS airflow;
+          CREATE DATABASE IF NOT EXISTS quant_data;
+          CREATE USER IF NOT EXISTS airflow WITH PASSWORD 'airflow';
+          CREATE USER IF NOT EXISTS quant_user WITH PASSWORD 'quant_password';
+          GRANT ALL PRIVILEGES ON DATABASE airflow TO airflow;
+          GRANT ALL PRIVILEGES ON DATABASE quant_data TO quant_user;
+        \" &&
+        wait
+      "
+
+  redis:
+    image: redis:7-alpine
+    container_name: quant-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - quant-network
+
+  airflow:
+    image: apache/airflow:2.8.0-python3.11
+    container_name: quant-airflow
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'false'
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
+      AIRFLOW__WEBSERVER__WARN_DEPLOYMENT_EXPOSURE: 'false'
+      AIRFLOW__WEBSERVER__SECRET_KEY: 'quant_platform_secret_key_2024'
+      POLYGON_API_KEY: ${POLYGON_API_KEY:-}
+      _PIP_ADDITIONAL_REQUIREMENTS: pandas psycopg2-binary sqlalchemy requests yfinance numpy
+    volumes:
+      # Use named volumes instead of bind mounts to avoid permission issues
+      - airflow_dags:/opt/airflow/dags
+      - airflow_logs:/opt/airflow/logs
+      - airflow_plugins:/opt/airflow/plugins
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - quant-network
+    command: >
+      bash -c "
+        # Copy DAGs into container (since we can't bind mount)
+        mkdir -p /opt/airflow/dags &&
+        cat > /opt/airflow/dags/sample_dag.py << 'EOF'
+        from datetime import datetime, timedelta
+        from airflow import DAG
+        from airflow.operators.bash import BashOperator
+        
+        default_args = {
+            'owner': 'quant-team',
+            'depends_on_past': False,
+            'start_date': datetime(2024, 1, 1),
+            'retries': 1,
+            'retry_delay': timedelta(minutes=5),
+        }
+        
+        dag = DAG(
+            'sample_quant_pipeline',
+            default_args=default_args,
+            description='Sample DAG for development',
+            schedule_interval='@daily',
+            catchup=False,
+        )
+        
+        task1 = BashOperator(
+            task_id='hello_world',
+            bash_command='echo \"Hello from Quantitative Research Platform!\"',
+            dag=dag,
+        )
+        EOF
+        
+        airflow db init &&
+        airflow users create --username \${AIRFLOW_ADMIN_USERNAME:-admin} --firstname Admin --lastname User --role Admin --email \${AIRFLOW_ADMIN_EMAIL:-admin@example.com} --password \${AIRFLOW_ADMIN_PASSWORD:-admin} &&
+        rm -f /opt/airflow/airflow-webserver.pid &&
+        airflow webserver --port 8080 --host 0.0.0.0 & airflow scheduler
+      "
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: quant-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - quant-network
+
+volumes:
+  postgres_data:
+  airflow_dags:
+  airflow_logs:
+  airflow_plugins:
+
+networks:
+  quant-network:
+    driver: bridge
