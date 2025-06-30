@@ -56,8 +56,11 @@ jobs:
           --namespace=${{ env.NAMESPACE }} \
           --dry-run=client -o yaml | kubectl apply -f -
     
-    - name: Create ConfigMaps
+    - name: Deploy ConfigMaps
       run: |
+        # Deploy unified database schema ConfigMap
+        kubectl apply -f k8s/db-init-configmap.yaml
+        
         # Create Airflow configuration
         kubectl create configmap quant-config \
           --from-literal=POSTGRES_USER="quant_user" \
@@ -75,12 +78,6 @@ jobs:
         # Update DAGs ConfigMap
         kubectl create configmap airflow-dags \
           --from-file=dags/ \
-          --namespace=${{ env.NAMESPACE }} \
-          --dry-run=client -o yaml | kubectl apply -f -
-          
-        # Update DB init script
-        kubectl create configmap db-init-script \
-          --from-file=init-db.sql \
           --namespace=${{ env.NAMESPACE }} \
           --dry-run=client -o yaml | kubectl apply -f -
           
