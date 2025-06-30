@@ -6,8 +6,8 @@
 -- Note: This will be executed via psql with environment variable substitution
 
 -- Create databases if they don't exist
-SELECT 'CREATE DATABASE airflow' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'airflow');
-SELECT 'CREATE DATABASE quant_data' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'quant_data');
+CREATE DATABASE airflow;
+CREATE DATABASE quant_data;
 
 -- Create airflow user if it doesn't exist
 DO
@@ -18,6 +18,11 @@ BEGIN
    END IF;
 END
 $do$;
+
+-- Grant privileges on airflow DB public schema to airflow user
+\c airflow
+GRANT ALL PRIVILEGES ON SCHEMA public TO airflow;
+ALTER SCHEMA public OWNER TO airflow;
 
 -- Create quant_user if it doesn't exist
 DO

@@ -121,7 +121,8 @@ services:
         airflow db init &&
         airflow users create --username \${AIRFLOW_ADMIN_USERNAME:-admin} --firstname Admin --lastname User --role Admin --email \${AIRFLOW_ADMIN_EMAIL:-admin@localhost} --password \${AIRFLOW_ADMIN_PASSWORD:-admin} &&
         rm -f /opt/airflow/airflow-webserver.pid &&
-        airflow webserver --port 8080 --host 0.0.0.0 & airflow scheduler
+        airflow scheduler &
+        exec airflow webserver --port 8080 --host 0.0.0.0
       "
 
   # ==============================================================================
