@@ -199,7 +199,7 @@ def load_market_data_and_features(**context) -> Dict[str, Any]:
     
     # Get active universe
     universe_sql = """
-    SELECT symbol as ticker, sector, market_cap_category
+    SELECT symbol as ticker, sector, market_cap
     FROM trading_universe 
     WHERE is_active = TRUE
     ORDER BY symbol
@@ -230,10 +230,10 @@ def load_market_data_and_features(**context) -> Dict[str, Any]:
             params={'execution_date': execution_date, 'symbols': symbols}
         )
     
-    # Load features for execution date from technical_features
+    # Load features for execution date from technical_indicators
     features_sql = """
-    SELECT symbol as ticker, features
-    FROM technical_features 
+    SELECT symbol as ticker, rsi_14, sma_20, sma_50, ema_12, ema_26, macd_line, macd_signal, bb_upper, bb_lower, volume_ratio
+    FROM technical_indicators 
     WHERE date = %(execution_date)s AND symbol = ANY(%(symbols)s)
     ORDER BY symbol
     """
@@ -245,20 +245,23 @@ def load_market_data_and_features(**context) -> Dict[str, Any]:
             params={'execution_date': execution_date, 'symbols': symbols}
         )
     
-    # Parse JSON features
+    # Convert features to dictionary format
     features_dict = {}
     if not features_df.empty:
         for _, row in features_df.iterrows():
             symbol = row['ticker']
-            features_json = row['features']
-            if features_json:
-                try:
-                    features_dict[symbol] = json.loads(features_json) if isinstance(features_json, str) else features_json
-                except json.JSONDecodeError:
-                    logger.warning(f"Failed to parse features for {symbol}")
-                    features_dict[symbol] = {}
-            else:
-                features_dict[symbol] = {}
+            features_dict[symbol] = {
+                'rsi_14': float(row['rsi_14']) if row['rsi_14'] is not None else None,
+                'sma_20': float(row['sma_20']) if row['sma_20'] is not None else None,
+                'sma_50': float(row['sma_50']) if row['sma_50'] is not None else None,
+                'ema_12': float(row['ema_12']) if row['ema_12'] is not None else None,
+                'ema_26': float(row['ema_26']) if row['ema_26'] is not None else None,
+                'macd': float(row['macd_line']) if row['macd_line'] is not None else None,
+                'macd_signal': float(row['macd_signal']) if row['macd_signal'] is not None else None,
+                'bb_upper': float(row['bb_upper']) if row['bb_upper'] is not None else None,
+                'bb_lower': float(row['bb_lower']) if row['bb_lower'] is not None else None,
+                'volume_ratio': float(row['volume_ratio']) if row['volume_ratio'] is not None else None
+            }
     
     # Combine market data and features
     combined_data = {}
@@ -271,8 +274,7 @@ def load_market_data_and_features(**context) -> Dict[str, Any]:
                 'high_price': float(row['high_price']),
                 'low_price': float(row['low_price']),
                 'close_price': float(row['close_price']),
-                'volume': int(row['volume']),
-                'vwap': float(row['vwap']) if row['vwap'] else None
+                'volume': int(row['volume'])
             },
             'features': features_dict.get(symbol, {})
         }
@@ -504,12 +506,12 @@ def generate_execution_summary(**context) -> Dict[str, Any]:
     model_results_sql = """
     SELECT 
         m.model_name,
-        m.status,
+        m.is_active,
         COUNT(s.id) as signals_generated
     FROM models m
     LEFT JOIN signals s ON m.id = s.model_id AND s.signal_date = %(execution_date)s
-    WHERE m.status = 'active'
-    GROUP BY m.id, m.model_name, m.status
+    WHERE m.is_active = true
+    GROUP BY m.id, m.model_name, m.is_active
     ORDER BY m.model_name;
     """
     

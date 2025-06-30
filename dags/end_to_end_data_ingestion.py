@@ -68,11 +68,24 @@ def fetch_market_data(**context) -> Dict[str, Any]:
     - Data quality validation
     - Database integration using the data layer
     """
-    execution_date = context['ds']
+    logger.info(f"Context type: {type(context)}, Context: {context}")
+    execution_date = context.get('ds', '2025-06-27')
     logger.info(f"Fetching market data for {execution_date}")
     
     # Get database connection
+    logger.info(f"Using connection string: {POSTGRES_CONN_STRING}")
     engine = create_engine(POSTGRES_CONN_STRING)
+    
+    # Test connection
+    with engine.connect() as test_conn:
+        result = test_conn.execute(text("SELECT current_database(), current_user"))
+        db_name, db_user = result.fetchone()
+        logger.info(f"Connected to database: {db_name} as user: {db_user}")
+        
+        # Check if technical_indicators table exists
+        table_check = test_conn.execute(text("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_name='technical_indicators')"))
+        table_exists = table_check.fetchone()[0]
+        logger.info(f"technical_indicators table exists: {table_exists}")
     
     # Get API key from environment variable
     api_key = os.getenv("POLYGON_API_KEY")
@@ -94,19 +107,18 @@ def fetch_market_data(**context) -> Dict[str, Any]:
             response.raise_for_status()
             
             data = response.json()
+            logger.info(f"API response for {symbol}: {data}")
             
             # Validate data quality
-            if data.get('status') == 'OK' and all(key in data for key in ['open', 'high', 'low', 'close', 'volume']):
+            if isinstance(data, dict) and data.get('status') == 'OK' and all(key in data for key in ['open', 'high', 'low', 'close', 'volume']):
                 market_data_records.append({
-                    'ticker': symbol,
+                    'symbol': symbol,
                     'date': execution_date,
                     'open_price': float(data['open']),
                     'high_price': float(data['high']),
                     'low_price': float(data['low']),
                     'close_price': float(data['close']),
-                    'volume': int(data['volume']),
-                    'vwap': data.get('afterHours', {}).get('vwap'),
-                    'transactions': data.get('afterHours', {}).get('transactions')
+                    'volume': int(data['volume'])
                 })
                 logger.info(f"Successfully fetched data for {symbol}")
             else:
@@ -122,17 +134,15 @@ def fetch_market_data(**context) -> Dict[str, Any]:
         with engine.begin() as conn:
             for value in market_data_records:
                 conn.execute(
-                    text("INSERT INTO market_data (symbol, date, open_price, high_price, low_price, close_price, volume, vwap, transactions) VALUES (:symbol, :date, :open_price, :high_price, :low_price, :close_price, :volume, :vwap, :transactions) ON CONFLICT (symbol, date) DO UPDATE SET open_price = EXCLUDED.open_price, high_price = EXCLUDED.high_price, low_price = EXCLUDED.low_price, close_price = EXCLUDED.close_price, volume = EXCLUDED.volume, vwap = EXCLUDED.vwap, transactions = EXCLUDED.transactions, updated_at = CURRENT_TIMESTAMP"),
+                    text("INSERT INTO market_data (symbol, date, open_price, high_price, low_price, close_price, volume) VALUES (:symbol, :date, :open_price, :high_price, :low_price, :close_price, :volume) ON CONFLICT (symbol, date) DO UPDATE SET open_price = EXCLUDED.open_price, high_price = EXCLUDED.high_price, low_price = EXCLUDED.low_price, close_price = EXCLUDED.close_price, volume = EXCLUDED.volume"),
                     {
-                        'symbol': value['ticker'], 
+                        'symbol': value['symbol'], 
                         'date': value['date'], 
                         'open_price': value['open_price'], 
                         'high_price': value['high_price'], 
                         'low_price': value['low_price'], 
                         'close_price': value['close_price'], 
-                        'volume': value['volume'], 
-                        'vwap': value['vwap'], 
-                        'transactions': value['transactions']
+                        'volume': value['volume']
                     }
                 )
         logger.info(f"Inserted {len(market_data_records)} market data records")
@@ -146,7 +156,7 @@ def fetch_market_data(**context) -> Dict[str, Any]:
         'execution_date': execution_date
     }
 
-def calculate_technical_features(**context) -> Dict[str, Any]:
+def calculate_technical_indicators(**context) -> Dict[str, Any]:
     """
     Calculate technical indicators and features using the data layer.
     
@@ -158,7 +168,19 @@ def calculate_technical_features(**context) -> Dict[str, Any]:
     execution_date = context['ds']
     logger.info(f"Calculating technical features for {execution_date}")
     
+    logger.info(f"Using connection string: {POSTGRES_CONN_STRING}")
     engine = create_engine(POSTGRES_CONN_STRING)
+    
+    # Test connection
+    with engine.connect() as test_conn:
+        result = test_conn.execute(text("SELECT current_database(), current_user"))
+        db_name, db_user = result.fetchone()
+        logger.info(f"Connected to database: {db_name} as user: {db_user}")
+        
+        # Check if technical_indicators table exists
+        table_check = test_conn.execute(text("SELECT EXISTS(SELECT FROM information_schema.tables WHERE table_name='technical_indicators')"))
+        table_exists = table_check.fetchone()[0]
+        logger.info(f"technical_indicators table exists: {table_exists}")
     
     # Get recent market data for feature calculation (last 60 days)
     lookback_date = (datetime.strptime(execution_date, '%Y-%m-%d') - timedelta(days=60)).strftime('%Y-%m-%d')
@@ -257,12 +279,28 @@ def calculate_technical_features(**context) -> Dict[str, Any]:
     if all_features:
         with engine.begin() as conn:
             for feature in all_features:
+                features_data = feature['features']
                 conn.execute(
-                    text("INSERT INTO technical_features (symbol, date, features) VALUES (:symbol, :date, :features) ON CONFLICT (symbol, date) DO UPDATE SET features = EXCLUDED.features, created_at = CURRENT_TIMESTAMP"),
+                    text("""INSERT INTO technical_indicators (symbol, date, rsi_14, sma_20, sma_50, ema_12, ema_26, macd_line, macd_signal, bb_upper, bb_lower, volume_ratio) 
+                         VALUES (:symbol, :date, :rsi_14, :sma_20, :sma_50, :ema_12, :ema_26, :macd, :macd_signal, :bb_upper, :bb_lower, :volume_ratio) 
+                         ON CONFLICT (symbol, date) DO UPDATE SET 
+                         rsi_14 = EXCLUDED.rsi_14, sma_20 = EXCLUDED.sma_20, sma_50 = EXCLUDED.sma_50, 
+                         ema_12 = EXCLUDED.ema_12, ema_26 = EXCLUDED.ema_26, macd_line = EXCLUDED.macd_line, 
+                         macd_signal = EXCLUDED.macd_signal, bb_upper = EXCLUDED.bb_upper, bb_lower = EXCLUDED.bb_lower, 
+                         volume_ratio = EXCLUDED.volume_ratio, updated_at = CURRENT_TIMESTAMP"""),
                     {
                         'symbol': feature['symbol'], 
                         'date': feature['date'], 
-                        'features': json.dumps(feature['features'])
+                        'rsi_14': features_data.get('rsi_14'),
+                        'sma_20': features_data.get('sma_20'),
+                        'sma_50': features_data.get('sma_50'),
+                        'ema_12': features_data.get('ema_12'),
+                        'ema_26': features_data.get('ema_26'),
+                        'macd': features_data.get('macd'),
+                        'macd_signal': features_data.get('macd_signal'),
+                        'bb_upper': features_data.get('bb_upper'),
+                        'bb_lower': features_data.get('bb_lower'),
+                        'volume_ratio': features_data.get('volume_ratio')
                     }
                 )
         logger.info(f"Inserted {len(all_features)} feature records")
@@ -355,7 +393,7 @@ def validate_data_quality(**context) -> Dict[str, Any]:
     # Check 2: Features completeness
     features_count_sql = """
     SELECT COUNT(DISTINCT symbol) as count 
-    FROM technical_features 
+    FROM technical_indicators 
     WHERE date = %(execution_date)s
     """
     with engine.connect() as conn:
@@ -438,8 +476,8 @@ fetch_data = PythonOperator(
 
 # Task 4: Calculate technical features
 calculate_features = PythonOperator(
-    task_id='calculate_technical_features',
-    python_callable=calculate_technical_features,
+    task_id='calculate_technical_indicators',
+    python_callable=calculate_technical_indicators,
     dag=dag,
 )
 

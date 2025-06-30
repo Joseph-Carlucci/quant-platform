@@ -70,17 +70,17 @@ def get_active_models(**context):
         SELECT DISTINCT
             s.model_id,
             m.model_name,
-            m.strategy_type as model_type,
+            m.model_type as model_type,
             'v1.0' as version,
             COUNT(s.id) as recent_signals,
             MAX(s.created_at) as last_signal_time,
-            AVG(s.confidence) as avg_confidence
+            AVG(s.confidence_score) as avg_confidence
         FROM signals s
         JOIN models m ON s.model_id = m.id
         WHERE s.created_at >= CURRENT_DATE - INTERVAL '30 days'
         AND s.model_id IS NOT NULL
-        AND m.status = 'active'
-        GROUP BY s.model_id, m.model_name, m.strategy_type
+        AND m.is_active = true
+        GROUP BY s.model_id, m.model_name, m.model_type
         HAVING COUNT(s.id) >= 5  -- Minimum signals for meaningful analysis
         ORDER BY last_signal_time DESC
         """
@@ -124,12 +124,12 @@ def calculate_model_performance(model_id: str, **context):
         signals_query = """
         SELECT 
             s.id as signal_id,
-            s.symbol,
+            s.ticker,
             s.signal_type,
             1.0 as signal_strength,
             NULL as price_target,
             NULL as stop_loss,
-            s.confidence as confidence_score,
+            s.confidence_score as confidence_score,
             s.created_at as signal_time,
             NULL as expected_return,
             
@@ -140,11 +140,11 @@ def calculate_model_performance(model_id: str, **context):
             
         FROM signals s
         LEFT JOIN market_data md_entry ON (
-            s.symbol = md_entry.symbol 
+            s.ticker = md_entry.symbol 
             AND s.signal_date = md_entry.date
         )
         LEFT JOIN market_data md_exit ON (
-            s.symbol = md_exit.symbol 
+            s.ticker = md_exit.symbol 
             AND md_exit.date = s.signal_date + INTERVAL '5 days'  -- 5-day holding period
         )
         WHERE s.model_id = %(model_id)s
@@ -200,7 +200,7 @@ def calculate_model_performance(model_id: str, **context):
             'model_id': model_id,
             'evaluation_date': datetime.now().date(),
             'metrics': metrics,
-            'detailed_signals': df[['signal_id', 'symbol', 'actual_return', 'confidence_score']].to_dict('records')
+            'detailed_signals': df[['signal_id', 'ticker', 'actual_return', 'confidence_score']].to_dict('records')
         }
         
         # Save to database
@@ -265,13 +265,13 @@ def generate_performance_report(**context):
         SELECT 
             mp.*,
             m.model_name,
-            m.strategy_type as model_type,
+            m.model_type as model_type,
             'v1.0' as version,
             ROW_NUMBER() OVER (PARTITION BY mp.model_id ORDER BY mp.evaluation_date DESC) as rn
         FROM model_performance mp
         JOIN models m ON mp.model_id = m.id
         WHERE mp.evaluation_date >= CURRENT_DATE - INTERVAL '7 days'
-        AND m.status = 'active'
+        AND m.is_active = true
         """
         
         with engine.connect() as conn:
@@ -353,13 +353,26 @@ def generate_performance_report(**context):
             updated_at = CURRENT_TIMESTAMP
         """
         
+        # Clean NaN values from report_data before JSON serialization
+        def clean_nan_values(obj):
+            if isinstance(obj, dict):
+                return {k: clean_nan_values(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [clean_nan_values(v) for v in obj]
+            elif isinstance(obj, float) and (obj != obj):  # NaN check
+                return None
+            else:
+                return obj
+        
+        clean_report_data = clean_nan_values(report_data)
+        
         params = {
             'report_date': datetime.now().date(),
             'total_models': summary['total_models'],
             'avg_return_all_models': float(summary['avg_return_all_models']),
             'best_model_id': summary['best_model']['model_id'],
             'worst_model_id': summary['worst_model']['model_id'],
-            'report_data': json.dumps(report_data, default=str)
+            'report_data': json.dumps(clean_report_data, default=str)
         }
         
         with engine.connect() as conn:
